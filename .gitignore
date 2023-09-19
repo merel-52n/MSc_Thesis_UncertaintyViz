@@ -1,3 +1,6 @@
+# Data
+*.gpkg
+
 # History files
 .Rhistory
 .Rapp.history
