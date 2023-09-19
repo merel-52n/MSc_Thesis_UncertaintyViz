@@ -10,7 +10,6 @@ library(tidyr)
 library(viridis)
 
 # Set the path to the geopackage files
-#geopackage_path <- "/home/merel/Documents/I-CISK/mockup-viz/data"
 path <- "./data"
 
 #### Load all GeoPackage files with meteorological data from meteo-RIA API from 2010 until 2022 ####
