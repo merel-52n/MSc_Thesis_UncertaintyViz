@@ -11,6 +11,7 @@ library(viridis)
 library(gganimate)
 library(gifski)
 library(transformr)
+library(magick)
 # See https://github.com/thomasp85/gganimate/issues/479 : so need dev version of transformr to reproduce
 # install.packages("devtools")
 #devtools::install_github("thomasp85/transformr")
@@ -180,7 +181,7 @@ sliced_krige_precip <- function(year) {
                      kriged_slices_var)
   
   # Assign the kriged_slices to the variable with the input year
-  kriged_slices_name <- paste0("kriged_slices_precip", year)
+  kriged_slices_name <- paste0("kriged_slices_precip_", year)
   assign(kriged_slices_name, kriged_slices, env=.GlobalEnv)
   
   #return(get(kriged_slices_name))
@@ -275,6 +276,9 @@ sliced_kriges <- function(year, variable_name) {
 # Run kriging interpolation for all years for temp and precip
 for (year in 2010:2022) {
   sliced_krige(year)
+}
+
+for (year in c(2010:2011, 2013:2022)) { # 2012 causes strange error?
   sliced_krige_precip(year)
 }
 
@@ -284,6 +288,12 @@ for (year in 2010:2022) {
 spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
 spain <- ne_countries(scale = "medium", country = "Spain", continent = "Europe", returnclass = "sf") |>
   st_crop(spain_mainland_bbox)
+spain_counties <- ne_states("spain", returnclass = "sf") |>
+  st_crop(spain_mainland_bbox)
+#spain_rivers <- ne_download(scale = 110, type = "rivers_lake_centerlines", category = "physical")
+
+# Crop interpolation for plotting
+cropped <- st_crop(kriged_slices_2011, spain)
 
 # Now plot results with Spain
 g <- ggplot() + 
@@ -294,45 +304,44 @@ g <- ggplot() +
   scale_y_discrete(expand=c(0,0))
 
 g_krig <- g + geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
+  geom_sf(data = st_cast(spain_counties, "MULTILINESTRING")) +
   # This plots the prediction for which month?
-  geom_stars(data = kriged_slices_2011["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
-  coord_sf(lims_method = "geometry_bbox") +
-  transition_states(states = time,
-                    transition_length = 2,
-                    state_length = 1)
-
+  geom_stars(data = cropped["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
+  coord_sf(lims_method = "geometry_bbox")
+  
 # st_get_dimension_values(kriged_slices_2011, "time")
+
+plot_krige <- function(year) {
+  # Create a ggplot for each year
+  g <- ggplot() + 
+    geom_sf() +
+    coord_equal() +
+    scale_fill_viridis() +
+    scale_x_discrete(expand=c(0,0)) +
+    scale_y_discrete(expand=c(0,0))
+  
+  g_krig <- g + geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
+    geom_stars(data = get(paste0("kriged_slices_", year))["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
+    coord_sf(lims_method = "geometry_bbox")
+  
+  g_krig
+  
+  # Save the ggplot as a PNG file
+  png_file <- paste0("./img/krige_animation_", year, ".png")
+  ggsave(filename = png_file, plot = g_krig, width = 6, height = 6, units = "in")
+}
+
+## Plot results and save as png
+for (year in 2010:2022) {
+ plot_krige(year)
+}
 
 filepath = "./img"
 
 png_files = list.files(filepath)
 png_files = paste0(filepath, '/', png_files)
+delay <- 0.3 #lookup speed in other paper
 gifski(png_files = png_files, gif_file = "krige-animation.gif",
        delay = delay,
        progress = T)
-
 image_read("krige-animation.gif")
-
-# to use gganimate, need to access variables in a column, so transforming to sf object to achieve this
-sf_df <- st_as_sf(kriged_slices_2010)
-
-# add time column
-sf_df$time_column <- seq_len(nrow(sf_df))
-
-g_krig_sf <- g + geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
-  # This plots the prediction for which month?
-  geom_raster(data = kriged_slices) +
-  coord_sf(lims_method = "geometry_bbox")
-
-transition_states(states = time_column,
-                    transition_length = 2,
-                    state_length = 1)
-animate(g_krig_sf)
-
-points <- ggplot(df_mean_2010) + 
-  geom_sf(aes(fill = mean_temperature)) +
-  transition_states(month, transition_length = 2, state_length = 0.1) +
-  coord_sf(crs = st_crs(df_mean_2010), datum = NA)
-
-animate(points)
-anim_save("animation.gif", animate(points))
