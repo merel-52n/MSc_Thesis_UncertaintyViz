@@ -292,26 +292,9 @@ spain_counties <- ne_states("spain", returnclass = "sf") |>
   st_crop(spain_mainland_bbox)
 #spain_rivers <- ne_download(scale = 110, type = "rivers_lake_centerlines", category = "physical")
 
-# Crop interpolation for plotting
-cropped <- st_crop(kriged_slices_2011, spain)
-
-# Now plot results with Spain
-g <- ggplot() + 
-  geom_sf() +
-  coord_equal() +
-  scale_fill_viridis() +
-  scale_x_discrete(expand=c(0,0)) +
-  scale_y_discrete(expand=c(0,0))
-
-g_krig <- g + geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
-  geom_sf(data = st_cast(spain_counties, "MULTILINESTRING")) +
-  # This plots the prediction for which month?
-  geom_stars(data = cropped["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
-  coord_sf(lims_method = "geometry_bbox")
+plot_krige <- function(year, saveOption) {
+  data <- get(paste0("kriged_slices_", year))
   
-# st_get_dimension_values(kriged_slices_2011, "time")
-
-plot_krige <- function(year) {
   # Create a ggplot for each year
   g <- ggplot() + 
     geom_sf() +
@@ -321,19 +304,20 @@ plot_krige <- function(year) {
     scale_y_discrete(expand=c(0,0))
   
   g_krig <- g + geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
-    geom_stars(data = get(paste0("kriged_slices_", year))["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
+    geom_stars(data = data["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
     coord_sf(lims_method = "geometry_bbox")
   
-  g_krig
-  
-  # Save the ggplot as a PNG file
-  png_file <- paste0("./img/krige_animation_", year, ".png")
-  ggsave(filename = png_file, plot = g_krig, width = 6, height = 6, units = "in")
+  if (saveOption == TRUE) {
+    # Save the ggplot as a PNG file
+    png_file <- paste0("./img/krige_animation_", year, ".png")
+    ggsave(filename = png_file, plot = g_krig, width = 6, height = 6, units = "in")
+  }
+  return(g_krig)
 }
 
 ## Plot results and save as png
 for (year in 2010:2022) {
- plot_krige(year)
+ plot_krige(year, saveOption = TRUE)
 }
 
 filepath = "./img"
@@ -345,3 +329,27 @@ gifski(png_files = png_files, gif_file = "krige-animation.gif",
        delay = delay,
        progress = T)
 image_read("krige-animation.gif")
+
+
+### Cropping output to spain shape
+
+# sf version
+cropped <- st_crop(st_as_sf(kriged_slices_2010), st_as_sf(spain))
+ggplot() + 
+  geom_sf(data = cropped, aes(fill = mean_temp_pred.V1)) +
+  geom_sf(data = st_cast(spain, "MULTILINESTRING"))
+
+# stars version
+cropped_star <- st_crop(kriged_slices_2010, st_as_sf(spain))
+ggplot() + 
+  geom_stars(data = cropped_star["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
+  geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
+  scale_fill_continuous(na.value="transparent")
+
+#### stars appendix ####
+# How to view 1 specific month
+# See https://tmieno2.github.io/R-as-GIS-for-Economists/some-basic-operations-on-stars-objects.html
+#kriged_slices_2010["mean_temp_pred", , , 6]$mean_temp_pred
+
+# Get time values
+#st_get_dimension_values(kriged_slices_2010, "time")
