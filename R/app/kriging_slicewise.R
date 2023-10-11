@@ -11,6 +11,9 @@ library(viridis)
 library(gifski)
 library(transformr)
 library(magick)
+library(mapview)
+library(leaflet)
+library(leafem)
 # See https://github.com/thomasp85/gganimate/issues/479 : so need dev version of transformr to reproduce
 # install.packages("devtools")
 #devtools::install_github("thomasp85/transformr")
@@ -304,7 +307,7 @@ plot_krige <- function(year, saveOption) {
   plot_krig <- ggplot() + 
     geom_stars(data = data["mean_temp_pred", , , 6], aes(fill = mean_temp_pred, x = x, y = y)) +
     scale_fill_viridis_c(name = "Predicted temperature (°C)", option = "C", direction = -1, na.value="transparent", limits=c(18,29)) +
-    geom_sf(data = st_cast(spain, "MULTILINESTRING"), aes(fill=white)) +
+    geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
     geom_sf(data = ocean, fill = "lightblue") +
     coord_sf(xlim=c(-9.248333, 0.2297222), ylim=c(34.285, 40.49611), expand = FALSE) +
     ggtitle(paste0("Temperature predictions for July"))
@@ -325,7 +328,7 @@ for (year in 2010:2022) {
 filepath = "./img"
 png_files = list.files(filepath)
 png_files = paste0(filepath, '/', png_files)
-delay <- 0.5
+delay = 0.5
 gifski(png_files = png_files, gif_file = "krige-animation.gif",
        delay = delay,
        progress = T)
@@ -351,15 +354,32 @@ ggplot() +
   scale_fill_continuous(na.value="transparent")
 
 # interactive map version
-pal <- colorNumeric("OrRd", df$z)
+cropped_star <- st_crop(kriged_slices_2010, st_as_sf(spain))
+
+code_col2Hex <- function(col) {
+  mat <- col2rgb(col, alpha = TRUE)
+  rgb(mat[1, ] / 255, mat[2, ] / 255, mat[3, ] / 255)
+}
+
+get_viridis_colors <- function(no_colors) {
+  code_col2Hex(viridis_pal(option="C")(no_colors))
+}
+
+pal = get_viridis_colors(3)
+
+pal = colorNumeric("magma", domain = cropped_star["mean_temp_pred", , , 6]$mean_temp_pred, reverse = TRUE, na.color = NA)
 
 leaflet() |> 
   addProviderTiles("OpenStreetMap") |> 
-  addStarsImage(cropped_star, opacity = 0.5) |> 
-  addLegend(pal = pal) |> 
+  addStarsImage(cropped_star, colors = pal(cropped_star["mean_temp_pred", , , 6]), opacity = 0.8) |> 
+  addLegend(pal = pal, values = cropped_star["mean_temp_pred", , , 6]$mean_temp_pred) |> 
   addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=100, height=60)
 
-mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA)
+mapviewOptions(raster.palette = hcl.colors(12, palette = "Inferno", rev = TRUE))
+
+mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July")
+
+addLogo(map, img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=100, height=60)
 
 # # sf version
 # cropped <- st_crop(st_as_sf(kriged_slices_2010), st_as_sf(spain))
@@ -371,7 +391,7 @@ mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.co
 
 # # stars version
 #library(mapview)
-#cropped_star <- st_crop(kriged_slices_2010, st_as_sf(spain))
+
 # library(leafem)
 # leaflet() |> addProviderTiles("OpenStreetMap") |> addStarsImage(kriged_slices_2010)
 #mapview(cropped_star)
