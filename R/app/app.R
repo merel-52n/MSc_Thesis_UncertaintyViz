@@ -24,7 +24,7 @@ ui <- fluidPage(
       tabPanel( title = "Map", value = "tab1",
                 mainPanel(
                   p("This page depicts possible outcomes of the temperature forecast for the next year.")),
-                  sliderInput("year", "Select Year", min = 2010, max = 2015, step = 1, value = 2010),
+                  sliderInput("year", "Select Year", min = 2010, max = 2015, step = 1, value = 2010, animate = animationOptions(interval = 800, loop = TRUE)),
                   leafletOutput("map")
                 )
         )
