@@ -22,15 +22,24 @@ ui <- fluidPage(
       
       # Page 1 "Map" content
       tabPanel( title = "Map", value = "tab1",
-                mainPanel(p("This page depicts possible outcomes of the temperature forecast for the next year."))
+                mainPanel(
+                  p("This page depicts possible outcomes of the temperature forecast for the next year.")),
+                  sliderInput("year", "Select Year", min = 2010, max = 2015, step = 1, value = 2010),
+                  leafletOutput("map")
                 )
         )
-    )
-)
+    ))
 
 #### Server ####
 server <- function(input, output) {
+    # Change the map data based on the selected year
+    
+    output$map <- renderLeaflet({
+      year <- input$year
+      map_data <- get(paste0("kriged_slices_", year))
+      mapview(map_data["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA)@map
+    })
+    
 }
-
 # Run the application 
 shinyApp(ui = ui, server = server)

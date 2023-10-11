@@ -25,7 +25,8 @@ path <- "./data"
 
 #### Load all GeoPackage files with meteorological data from meteo-RIA API from 2010 until 2022 ####
 # Create separate dfs for mean temperature per month + summed precipitation per month
-for (year in 2010:2022) {
+years = 2010:2015
+for (year in years) {
   filename <- paste0("meteo_andalucia_", year, ".gpkg")
   filepath <- file.path(path, filename)
   df_name_temp <- paste0("df_mean_tmp_", year)
@@ -46,6 +47,11 @@ for (year in 2010:2022) {
 
 #### define target grid ####
 grd <- make_grid(df_mean_tmp_2010, res = 0.1) # change res as needed
+
+# Get Spain shape to crop kriging output later
+spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
+spain <- ne_countries(scale = "medium", country = "Spain", continent = "Europe", returnclass = "sf") |>
+  st_crop(spain_mainland_bbox)
 
 #### function form ##### 
 sliced_krige <- function(year) {
@@ -110,6 +116,8 @@ sliced_krige <- function(year) {
   # re-combine predictions and variance
   kriged_slices <- c(kriged_slices_pred,
                      kriged_slices_var)
+  # crop to spain mainland
+  kriged_slices <- st_crop(kriged_slices, st_as_sf(spain))
   
   # Assign the kriged_slices to the variable with the input year
   kriged_slices_name <- paste0("kriged_slices_", year)
@@ -181,6 +189,9 @@ sliced_krige_precip <- function(year) {
   # re-combine predictions and variance
   kriged_slices <- c(kriged_slices_pred,
                      kriged_slices_var)
+  
+  # crop to spain mainland
+  kriged_slices <- st_crop(kriged_slices, st_as_sf(spain))
   
   # Assign the kriged_slices to the variable with the input year
   kriged_slices_name <- paste0("kriged_slices_precip_", year)
@@ -276,110 +287,99 @@ sliced_kriges <- function(year, variable_name) {
 
 
 # Run kriging interpolation for all years for temp and precip
-for (year in 2010:2022) {
+for (year in years) {
   sliced_krige(year)
 }
 
-for (year in c(2010:2011, 2013:2022)) { # 2012 causes strange error?
-  sliced_krige_precip(year)
-}
+# for (year in c(2010:2011, 2013:2022)) { # 2012 causes strange error?
+#   sliced_krige_precip(year)
+# }
 
 #### Plotting ####
 
 ### 1. Get additional layers
 # Get Spain and Portugal shape to plot alongside one of the results (use st_crop for croppping out Canary Islands + Azores)
-spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
-spain <- ne_countries(scale = "medium", country = "Spain", continent = "Europe", returnclass = "sf") |>
-  st_crop(spain_mainland_bbox) 
-
-pt_mainland_bbox <- c(xmin = -9.52657060387, xmax = 36.838268541, ymin = -6.3890876937, ymax = 42.280468655)
-portugal <- ne_countries(scale = "medium", country = "Portugal", continent = "Europe", returnclass = "sf") |>
-  st_crop(pt_mainland_bbox)
-
-# Download ocean layer to mask rectangle shape
-ocean <- ne_download(category = "physical", scale = "medium", type = "ocean", returnclass = "sf")
+# spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
+# spain <- ne_countries(scale = "medium", country = "Spain", continent = "Europe", returnclass = "sf") |>
+#   st_crop(spain_mainland_bbox) 
+# 
+# pt_mainland_bbox <- c(xmin = -9.52657060387, xmax = 36.838268541, ymin = -6.3890876937, ymax = 42.280468655)
+# portugal <- ne_countries(scale = "medium", country = "Portugal", continent = "Europe", returnclass = "sf") |>
+#   st_crop(pt_mainland_bbox)
+# 
+# # Download ocean layer to mask rectangle shape
+# ocean <- ne_download(category = "physical", scale = "medium", type = "ocean", returnclass = "sf")
 
 ### 2. Plot kriging interpolation alongside above created layers
-plot_krige <- function(year, saveOption) {
-  data <- get(paste0("kriged_slices_", year))
-  
-  # Create a ggplot for each year
-  plot_krig <- ggplot() + 
-    geom_stars(data = data["mean_temp_pred", , , 6], aes(fill = mean_temp_pred, x = x, y = y)) +
-    scale_fill_viridis_c(name = "Predicted temperature (°C)", option = "C", direction = -1, na.value="transparent", limits=c(18,29)) +
-    geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
-    geom_sf(data = ocean, fill = "lightblue") +
-    coord_sf(xlim=c(-9.248333, 0.2297222), ylim=c(34.285, 40.49611), expand = FALSE) +
-    ggtitle(paste0("Temperature predictions for July"))
-  
-  # Save the ggplot as a PNG file if desired
-  if (saveOption == TRUE) {
-    png_file <- paste0("./img/krige_animation_", year, ".png")
-    ggsave(filename = png_file, plot = plot_krig, width = 6, height = 6, units = "in")
-  }
-  return(plot_krig)
-}
-
-## Plot results and save as png
-for (year in 2010:2022) {
- plot_krige(year, saveOption = TRUE)
-}
-
-filepath = "./img"
-png_files = list.files(filepath)
-png_files = paste0(filepath, '/', png_files)
-delay = 0.5
-gifski(png_files = png_files, gif_file = "krige-animation.gif",
-       delay = delay,
-       progress = T)
-image_read("krige-animation.gif")
+# plot_krige <- function(year, saveOption) {
+#   data <- get(paste0("kriged_slices_", year))
+#   
+#   # Create a ggplot for each year
+#   plot_krig <- ggplot() + 
+#     geom_stars(data = data["mean_temp_pred", , , 6], aes(fill = mean_temp_pred, x = x, y = y)) +
+#     scale_fill_viridis_c(name = "Predicted temperature (°C)", option = "C", direction = -1, na.value="transparent", limits=c(18,29)) +
+#     geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
+#     geom_sf(data = ocean, fill = "lightblue") +
+#     coord_sf(xlim=c(-9.248333, 0.2297222), ylim=c(34.285, 40.49611), expand = FALSE) +
+#     ggtitle(paste0("Temperature predictions for July"))
+#   
+#   # Save the ggplot as a PNG file if desired
+#   if (saveOption == TRUE) {
+#     png_file <- paste0("./img/krige_animation_", year, ".png")
+#     ggsave(filename = png_file, plot = plot_krig, width = 6, height = 6, units = "in")
+#   }
+#   return(plot_krig)
+# }
+# 
+# ## Plot results and save as png
+# for (year in 2010:2022) {
+#  plot_krige(year, saveOption = TRUE)
+# }
+# 
+# filepath = "./img"
+# png_files = list.files(filepath)
+# png_files = paste0(filepath, '/', png_files)
+# delay = 0.5
+# gifski(png_files = png_files, gif_file = "krige-animation.gif",
+#        delay = delay,
+#        progress = T)
+# image_read("krige-animation.gif")
 
 # Plot for 1 year
 
-ggplot() + 
-  geom_sf(data = spain) +
-  geom_stars(data = kriged_slices_2018["mean_temp_pred", , , 6], aes(fill = mean_temp_pred, x = x, y = y)) +
-  scale_fill_viridis_c(name = "Predicted temperature (°C)", option = "C", direction = -1, na.value="transparent", limits=c(18,29)) +
-  geom_sf(data = ocean, fill = "lightblue") +
-  geom_sf(data = portugal) +
-  coord_sf(xlim=c(-9.248333, 0.2297222), ylim=c(34.285, 40.49611), expand = FALSE)
-  #scale_fill_continuous(na.value="transparent")
-
-ggplot() + 
-  geom_stars(data = kriged_slices_2010["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
-  facet_wrap(~time) +
-  geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
-  geom_sf(data = ocean, fill = "lightblue") +
-  coord_sf(xlim=c(-9.248333, 0.2297222), ylim=c(34.285, 40.49611), expand = FALSE) +
-  scale_fill_continuous(na.value="transparent")
+# ggplot() + 
+#   geom_sf(data = spain) +
+#   geom_stars(data = kriged_slices_2018["mean_temp_pred", , , 6], aes(fill = mean_temp_pred, x = x, y = y)) +
+#   scale_fill_viridis_c(name = "Predicted temperature (°C)", option = "C", direction = -1, na.value="transparent", limits=c(18,29)) +
+#   geom_sf(data = ocean, fill = "lightblue") +
+#   geom_sf(data = portugal) +
+#   coord_sf(xlim=c(-9.248333, 0.2297222), ylim=c(34.285, 40.49611), expand = FALSE)
+#   #scale_fill_continuous(na.value="transparent")
+# 
+# ggplot() + 
+#   geom_stars(data = kriged_slices_2010["mean_temp_pred"], aes(fill = mean_temp_pred, x = x, y = y)) +
+#   facet_wrap(~time) +
+#   geom_sf(data = st_cast(spain, "MULTILINESTRING")) +
+#   geom_sf(data = ocean, fill = "lightblue") +
+#   coord_sf(xlim=c(-9.248333, 0.2297222), ylim=c(34.285, 40.49611), expand = FALSE) +
+#   scale_fill_continuous(na.value="transparent")
 
 # interactive map version
 cropped_star <- st_crop(kriged_slices_2010, st_as_sf(spain))
 
-code_col2Hex <- function(col) {
-  mat <- col2rgb(col, alpha = TRUE)
-  rgb(mat[1, ] / 255, mat[2, ] / 255, mat[3, ] / 255)
-}
+pal = hcl.colors(12, palette = "Inferno", rev = TRUE)
 
-get_viridis_colors <- function(no_colors) {
-  code_col2Hex(viridis_pal(option="C")(no_colors))
-}
+mapviewOptions(raster.palette = pal)
 
-pal = get_viridis_colors(3)
+temperature_map <- mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July") |>
+  addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=125, height=48)
 
-pal = colorNumeric("magma", domain = cropped_star["mean_temp_pred", , , 6]$mean_temp_pred, reverse = TRUE, na.color = NA)
-
-leaflet() |> 
-  addProviderTiles("OpenStreetMap") |> 
-  addStarsImage(cropped_star, colors = pal(cropped_star["mean_temp_pred", , , 6]), opacity = 0.8) |> 
-  addLegend(pal = pal, values = cropped_star["mean_temp_pred", , , 6]$mean_temp_pred) |> 
-  addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=100, height=60)
-
-mapviewOptions(raster.palette = hcl.colors(12, palette = "Inferno", rev = TRUE))
-
-mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July")
-
-addLogo(map, img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=100, height=60)
+# # leaflet version
+# leaflet() |> 
+#   addProviderTiles("OpenStreetMap") |> 
+#   addStarsImage(cropped_star, col = pal, opacity = 0.8) |> 
+#   addLegend(pal = pal, values = cropped_star["mean_temp_pred", , , 6]$mean_temp_pred) |> 
+#   addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=100, height=60)
 
 # # sf version
 # cropped <- st_crop(st_as_sf(kriged_slices_2010), st_as_sf(spain))
