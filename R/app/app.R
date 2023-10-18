@@ -25,7 +25,8 @@ ui <- fluidPage(
                 mainPanel(
                   p("This page depicts possible outcomes of the temperature forecast for the next year.")),
                   sliderInput("year", "Select Year", min = 2010, max = 2015, step = 1, value = 2010, animate = animationOptions(interval = 800, loop = TRUE)),
-                  leafletOutput("map")
+                  leafletOutput("map"),
+                  leafletOutput("map_variance")
                 )
         )
     ))
@@ -39,6 +40,26 @@ server <- function(input, output) {
       map_data <- get(paste0("kriged_slices_", year))
       mapview(map_data["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA)@map
     })
+    
+    server <- function(input, output, session) {
+      # Initialize the map
+      output$map <- renderLeaflet({
+        year <- 2010
+        map_data <- get(paste0("kriged_slices_", year))
+        map <- mapview(map_data["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA)
+      })
+      
+      # Use leafletProxy to update the Temperature layer
+      observeEvent(input$year, {
+        proxy <- leafletProxy("map")
+        map_data <- get(paste0("kriged_slices_", year))
+        print(paste0("Input observed: user picked year ", year))
+        leafletProxy("map") %>%
+          clearGroup("Temperature") %>%
+          addCircles(data = map_data["mean_temp_pred", , , 6], layerId = "Temperature")
+      })
+    }
+    
     
 }
 # Run the application 

@@ -368,6 +368,7 @@ for (year in years) {
 cropped_star <- st_crop(kriged_slices_2010, st_as_sf(spain))
 
 pal = hcl.colors(12, palette = "Inferno", rev = TRUE)
+pal_var = hcl.colors(12, palette = "Viridis")
 
 mapviewOptions(raster.palette = pal)
 
