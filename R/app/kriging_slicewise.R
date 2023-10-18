@@ -116,6 +116,7 @@ sliced_krige <- function(year) {
   # re-combine predictions and variance
   kriged_slices <- c(kriged_slices_pred,
                      kriged_slices_var)
+  
   # crop to spain mainland
   kriged_slices <- st_crop(kriged_slices, st_as_sf(spain))
   
@@ -365,7 +366,13 @@ for (year in years) {
 #   scale_fill_continuous(na.value="transparent")
 
 # interactive map version
-cropped_star <- st_crop(kriged_slices_2010, st_as_sf(spain))
+
+# Read in Spanish shapefile layer
+path2 <- "./data/Spain_LL_extended_region/"
+spain_LL <- st_read(path2)
+
+# Get rid of buffer region
+spain_LL <- spain_LL[spain_LL$CATEGORY == "Guadalquivir + Pecroches (Guadiana)", ] |> st_transform(crs = 4326)
 
 pal = hcl.colors(12, palette = "Inferno", rev = TRUE)
 pal_var = hcl.colors(12, palette = "Viridis")
@@ -374,6 +381,11 @@ mapviewOptions(raster.palette = pal)
 
 temperature_map <- mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July") |>
   addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=125, height=48)
+
+leaflet() |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  addStarsImage(kriged_slices_2010["mean_temp_pred", , , 6], layerId = "Temperature", opacity = 0.7) |>
+  addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
 
 # # leaflet version
 # leaflet() |> 
