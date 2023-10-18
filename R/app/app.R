@@ -25,42 +25,38 @@ ui <- fluidPage(
                 mainPanel(
                   p("This page depicts possible outcomes of the temperature forecast for the next year.")),
                   sliderInput("year", "Select Year", min = 2010, max = 2015, step = 1, value = 2010, animate = animationOptions(interval = 800, loop = TRUE)),
-                  leafletOutput("map"),
-                  leafletOutput("map_variance")
+                  leafletOutput("map")
                 )
         )
     ))
 
 #### Server ####
-server <- function(input, output) {
+server <- function(input, output, session) {
     # Change the map data based on the selected year
-    
-    output$map <- renderLeaflet({
-      year <- input$year
-      map_data <- get(paste0("kriged_slices_", year))
-      mapview(map_data["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA)@map
-    })
-    
-    server <- function(input, output, session) {
-      # Initialize the map
+    # output$map <- renderLeaflet({
+    #   year <- input$year
+    #   map_data <- get(paste0("kriged_slices_", year))
+    #   mapview(map_data["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA)@map
+    # })
+
+      # Create an initial map
       output$map <- renderLeaflet({
         year <- 2010
         map_data <- get(paste0("kriged_slices_", year))
-        map <- mapview(map_data["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA)
+        leaflet() |>
+          addProviderTiles(providers$CartoDB.Positron) |>
+          addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", opacity = 0.7)
       })
       
-      # Use leafletProxy to update the Temperature layer
+      # Use observeEvent to update the layer when the input changes
       observeEvent(input$year, {
-        proxy <- leafletProxy("map")
+        year <- input$year
         map_data <- get(paste0("kriged_slices_", year))
-        print(paste0("Input observed: user picked year ", year))
-        leafletProxy("map") %>%
-          clearGroup("Temperature") %>%
-          addCircles(data = map_data["mean_temp_pred", , , 6], layerId = "Temperature")
+        leafletProxy("map", data = map_data) |>
+          clearGroup("Temperature") |>  # Clear the existing image layer
+          addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", opacity = 0.7)
       })
-    }
-    
-    
 }
+
 # Run the application 
 shinyApp(ui = ui, server = server)
