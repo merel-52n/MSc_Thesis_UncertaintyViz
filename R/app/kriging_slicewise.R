@@ -14,6 +14,7 @@ library(magick)
 library(mapview)
 library(leaflet)
 library(leafem)
+library(viridisLite)
 # See https://github.com/thomasp85/gganimate/issues/479 : so need dev version of transformr to reproduce
 # install.packages("devtools")
 #devtools::install_github("thomasp85/transformr")
@@ -374,17 +375,25 @@ spain_LL <- st_read(path2)
 # Get rid of buffer region
 spain_LL <- spain_LL[spain_LL$CATEGORY == "Guadalquivir + Pecroches (Guadiana)", ] |> st_transform(crs = 4326)
 
-pal = hcl.colors(12, palette = "Inferno", rev = TRUE)
-pal_var = hcl.colors(12, palette = "Viridis")
+# pal = hcl.colors(12, palette = "Inferno", rev = TRUE)
+# pal_var = hcl.colors(12, palette = "Viridis")
 
-mapviewOptions(raster.palette = pal)
+pal = colorNumeric(
+  viridisLite::inferno(12), 
+  domain = range(kriged_slices_2010["mean_temp_pred", , , 6]$mean_temp_pred, na.rm = TRUE),
+  na.color = "transparent"
+)
 
-temperature_map <- mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July") |>
-  addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=125, height=48)
+# mapviewOptions(raster.palette = pal)
+
+# temperature_map <- mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July") |>
+#   addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=125, height=48)
 
 leaflet() |>
   addProviderTiles(providers$CartoDB.Positron) |>
-  addStarsImage(kriged_slices_2010["mean_temp_pred", , , 6], layerId = "Temperature", opacity = 0.7) |>
+  addStarsImage(kriged_slices_2010["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
+  addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright") |>
+  #addLegend(pal = pal, values = kriged_slices_2010["mean_temp_pred", , , 6], title = "Temperature", position = "bottomright") |>
   addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
 
 # # leaflet version
