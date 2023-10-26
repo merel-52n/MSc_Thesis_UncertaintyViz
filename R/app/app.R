@@ -22,7 +22,7 @@ ui <- fluidPage(
     tabPanel( title = "Map 1", value = "tab1",
               mainPanel(
                 p("This page depicts possible outcomes of the temperature forecast for the next year.")),
-              sliderInput("year", "Select Year", min = 2010, max = 2015, step = 1, value = 2010, animate = animationOptions(interval = 800, loop = TRUE)),
+              sliderInput("year", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1], animate = animationOptions(interval = 800, loop = TRUE)),
               leafletOutput("map")
     ),
     
@@ -62,7 +62,7 @@ server <- function(input, output, session) {
     leaflet() |>
       addProviderTiles(providers$CartoDB.Positron) |>
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-      addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright") |>
+      addLegend(pal = pal, values = 30:18, title = "Temperature", position = "bottomright", opacity = 1) |>
       addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
   })
   
@@ -72,8 +72,9 @@ server <- function(input, output, session) {
     map_data <- get(paste0("kriged_slices_", year))
     leafletProxy("map", data = map_data) |>
       clearGroup("Temperature") |>  # Clear the existing starsImage layer
-      addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", opacity = 0.7) |>
-      addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright")
+      #clearControls() |> # Clear the legend
+      addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
+      #addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright")
   })
   
 }

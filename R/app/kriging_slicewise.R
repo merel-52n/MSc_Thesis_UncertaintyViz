@@ -26,7 +26,11 @@ path <- "./data"
 
 #### Load all GeoPackage files with meteorological data from meteo-RIA API from 2010 until 2022 ####
 # Create separate dfs for mean temperature per month + summed precipitation per month
+
+# configurable variables
 years = 2010:2015
+grdsize = 0.05
+
 for (year in years) {
   filename <- paste0("meteo_andalucia_", year, ".gpkg")
   filepath <- file.path(path, filename)
@@ -37,7 +41,7 @@ for (year in years) {
   tmp_mean <- tmpData |>
     group_by(month, station_name) |>
     summarise(mean_temperature = mean(mean_temperature, na.rm = TRUE)) |>
-    na.omit() ## added this
+    na.omit() 
   assign(df_name_temp, tmp_mean)
   precip_mean <- tmpData |>
     group_by(month, station_name) |>
@@ -47,12 +51,19 @@ for (year in years) {
 }
 
 #### define target grid ####
-grd <- make_grid(df_mean_tmp_2010, res = 0.1) # change res as needed
+grd <- make_grid(df_mean_tmp_2010, res = grdsize) # change res as needed
 
 # Get Spain shape to crop kriging output later
-spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
-spain <- ne_countries(scale = "medium", country = "Spain", continent = "Europe", returnclass = "sf") |>
-  st_crop(spain_mainland_bbox)
+# spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
+# spain <- ne_countries(scale = "medium", country = "Spain", continent = "Europe", returnclass = "sf") |>
+#   st_crop(spain_mainland_bbox)
+
+# Read in Spanish shapefile layer
+path2 <- "./data/Spain_LL_extended_region/"
+spain_LL <- st_read(path2)
+
+# Get rid of buffer region
+spain_LL <- spain_LL[spain_LL$CATEGORY == "Guadalquivir + Pecroches (Guadiana)", ] |> st_transform(crs = 4326)
 
 #### function form ##### 
 sliced_krige <- function(year) {
@@ -118,8 +129,8 @@ sliced_krige <- function(year) {
   kriged_slices <- c(kriged_slices_pred,
                      kriged_slices_var)
   
-  # crop to spain mainland
-  kriged_slices <- st_crop(kriged_slices, st_as_sf(spain))
+  # crop to spain LL shape
+  kriged_slices <- st_crop(kriged_slices, spain_LL)
   
   # Assign the kriged_slices to the variable with the input year
   kriged_slices_name <- paste0("kriged_slices_", year)
@@ -368,19 +379,15 @@ for (year in years) {
 
 # interactive map version
 
-# Read in Spanish shapefile layer
-path2 <- "./data/Spain_LL_extended_region/"
-spain_LL <- st_read(path2)
-
-# Get rid of buffer region
-spain_LL <- spain_LL[spain_LL$CATEGORY == "Guadalquivir + Pecroches (Guadiana)", ] |> st_transform(crs = 4326)
 
 # pal = hcl.colors(12, palette = "Inferno", rev = TRUE)
 # pal_var = hcl.colors(12, palette = "Viridis")
 
 pal = colorNumeric(
-  viridisLite::inferno(12), 
-  domain = range(kriged_slices_2010["mean_temp_pred", , , 6]$mean_temp_pred, na.rm = TRUE),
+  viridisLite::inferno(32), 
+  #domain = range(kriged_slices_2010["mean_temp_pred", , , 3]$mean_temp_pred, na.rm = TRUE),
+  domain = range(c(18:30)), 
+  rev = TRUE,
   na.color = "transparent"
 )
 
