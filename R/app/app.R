@@ -21,15 +21,18 @@ ui <- fluidPage(
     # Page 1 "Map 1" content
     tabPanel( title = "Map 1", value = "tab1",
               mainPanel(
-                p("This page depicts possible outcomes of the temperature forecast for the next year.")),
+                h1("Hypothetical Outcome Map"),
+                p("This page depicts possible outcomes of the temperature forecast for the next year. Click on the play-button ▶️️ in the slider to view the animation."),
               sliderInput("year", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1], animate = animationOptions(interval = 800, loop = TRUE)),
               leafletOutput("map")
-    ),
+    )),
     
     # Page 2 "Map 2" content
     tabPanel( title = "Map 2", value = "tab2",
               mainPanel(
-                p("This page depicts possible outcomes of the temperature forecast for the next year."))
+                p("This page depicts two maps: the left one displays the temperature forecast for the next year. The map on the right is the associated uncertainty of the forecast.")),
+                column(width = 6, h1("Forecast"), leafletOutput("map2_1")),
+                column(width = 6, h1("Forecast Uncertainty"), leafletOutput("map2_2"))
     ),
     # Page 3 "Map 3" content
     tabPanel( title = "Map 3", value = "tab3",
@@ -63,11 +66,12 @@ server <- function(input, output, session) {
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-      addLegend(pal = pal, values = 18:30, title = "Temperature", position = "bottomright", opacity = 1) |>
+      addLegend(pal = pal, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1) |>
       addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
   })
   
   # Use observeEvent to update the layer when the input changes
+  # corresponds to above map
   observeEvent(input$year, {
     year <- input$year
     map_data <- get(paste0("kriged_slices_", year))
@@ -76,6 +80,24 @@ server <- function(input, output, session) {
       #clearControls() |> # Clear the legend
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
       #addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright")
+  })
+  
+  output$map2_1 <- renderLeaflet({
+    leaflet() |>
+      addProviderTiles(providers$CartoDB.Positron) |>
+      addMouseCoordinates() |>
+      addStarsImage(kriged_slices_2015["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
+      addLegend(pal = pal, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1) |>
+      addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+  })
+  
+  output$map2_2 <- renderLeaflet({
+    leaflet() |>
+      addProviderTiles(providers$CartoDB.Positron) |>
+      addMouseCoordinates() |>
+      addStarsImage(kriged_slices_unc2015["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
+      addLegend(pal = pal2, values = 0.3:4.3, title = "Possible difference (°C)", position = "bottomright", opacity = 1) |>
+      addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
   })
   
 }

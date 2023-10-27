@@ -11,6 +11,7 @@ sliced_krige_withUnc <- function(year) {
   kriged_slices_var  <- NULL
   kriged_slices_lowerbound <- NULL 
   kriged_slices_upperbound <- NULL
+  kriged_slices_difference <- NULL
   
   timeCodes <- format(as.POSIXct(paste(year, "-01-01", sep=""))+0:11*31*24*3600, "%Y-%m")
   for(cur_month in timeCodes) { # cur_month <- timeCodes[7]
@@ -32,6 +33,7 @@ sliced_krige_withUnc <- function(year) {
     # Calculate the lower and upper bounds of the prediction interval
     lower_bound <- cur_kriged_slice$var1.pred - 1.96 * standard_deviation
     upper_bound <- cur_kriged_slice$var1.pred + 1.96 * standard_deviation
+    difference <- 1.96 * standard_deviation
     
     # merge predictions
     cur_kriged_slice_pred <- cur_kriged_slice["var1.pred",]
@@ -65,6 +67,14 @@ sliced_krige_withUnc <- function(year) {
       kriged_slices_lowerbound <- c(kriged_slices_lowerbound, cur_kriged_slice_lowerbound)
     } else {
       kriged_slices_lowerbound <- cur_kriged_slice_lowerbound
+    }
+    
+    # merge differences
+    cur_kriged_slice_difference <- st_as_stars(difference)
+    if (!is.null(kriged_slices_difference)) {
+      kriged_slices_difference <- c(kriged_slices_difference, cur_kriged_slice_difference)
+    } else {
+      kriged_slices_difference <- cur_kriged_slice_difference
     }
   }
   
@@ -103,15 +113,29 @@ sliced_krige_withUnc <- function(year) {
                                                 values=timeCodes)
   attributes(kriged_slices_upperbound)$names <- "mean_temp_upperbound"
   
-  # Configure x and y dimensions of the upper and lower bound attributes to match the interpolation grid
+  # redimension difference
+  kriged_slices_difference <- st_redimension(kriged_slices_difference)
+  kriged_slices_difference <- st_set_dimensions(kriged_slices_difference, 
+                                                which = 3, 
+                                                names="time", 
+                                                values=timeCodes)
+  attributes(kriged_slices_difference)$names <- "mean_temp_difference"
+  
+  # Configure x and y dimensions of the upper+lower+diff attributes to match the interpolation grid
   st_crs(kriged_slices_upperbound) <- st_crs(kriged_slices_pred)
   st_crs(kriged_slices_lowerbound) <- st_crs(kriged_slices_pred)
+  st_crs(kriged_slices_difference) <- st_crs(kriged_slices_pred)
+  
   kriged_slices_upperbound <- st_set_dimensions(kriged_slices_upperbound, which = "x", values = st_get_dimension_values(kriged_slices_pred, "x", center = FALSE))
   kriged_slices_upperbound <- st_set_dimensions(kriged_slices_upperbound, which = "y", values = st_get_dimension_values(kriged_slices_pred, "y", center = FALSE))
   kriged_slices_lowerbound <- st_set_dimensions(kriged_slices_lowerbound, which = "x", values = st_get_dimension_values(kriged_slices_pred, "x", center = FALSE))
   kriged_slices_lowerbound <- st_set_dimensions(kriged_slices_lowerbound, which = "y", values = st_get_dimension_values(kriged_slices_pred, "y", center = FALSE))
+  kriged_slices_difference <- st_set_dimensions(kriged_slices_difference, which = "x", values = st_get_dimension_values(kriged_slices_pred, "x", center = FALSE))
+  kriged_slices_difference <- st_set_dimensions(kriged_slices_difference, which = "y", values = st_get_dimension_values(kriged_slices_pred, "y", center = FALSE))
+  
   st_crs(kriged_slices_upperbound) <- st_crs(kriged_slices_pred)
   st_crs(kriged_slices_lowerbound) <- st_crs(kriged_slices_pred)
+  st_crs(kriged_slices_difference) <- st_crs(kriged_slices_pred)
   
   # re-combine predictions and variance
   kriged_slices <- c(kriged_slices_pred,
@@ -120,7 +144,8 @@ sliced_krige_withUnc <- function(year) {
   
   # re-combine upper and lower bounds
   kriged_slices_unc <- c(kriged_slices_lowerbound,
-                         kriged_slices_upperbound)
+                         kriged_slices_upperbound,
+                         kriged_slices_difference)
   print(kriged_slices_unc)
   
   # this doesnt work, but I would expect it to
