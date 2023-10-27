@@ -20,16 +20,16 @@ library(viridisLite)
 #devtools::install_github("thomasp85/transformr")
 #library(transformr) see https://stackoverflow.com/questions/68450668/how-can-i-animate-points-on-a-spatial-map-with-gganimate-sf-and-ggplot2 
 
+# configurable variables
+years = 2010:2015
+pixelsize = 0.05
+
 # Set the path to the geopackage files
 setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/")
 path <- "./data"
 
 #### Load all GeoPackage files with meteorological data from meteo-RIA API from 2010 until 2022 ####
 # Create separate dfs for mean temperature per month + summed precipitation per month
-
-# configurable variables
-years = 2010:2015
-grdsize = 0.05
 
 for (year in years) {
   filename <- paste0("meteo_andalucia_", year, ".gpkg")
@@ -51,7 +51,7 @@ for (year in years) {
 }
 
 #### define target grid ####
-grd <- make_grid(df_mean_tmp_2010, res = grdsize) # change res as needed
+grd <- make_grid(df_mean_tmp_2010, res = pixelsize) # change res as needed
 
 # Get Spain shape to crop kriging output later
 # spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
@@ -299,7 +299,7 @@ sliced_kriges <- function(year, variable_name) {
 }
 
 
-# Run kriging interpolation for all years for temp and precip
+# Run kriging interpolation for all years for temp
 for (year in years) {
   sliced_krige(year)
 }

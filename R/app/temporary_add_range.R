@@ -124,14 +124,18 @@ sliced_krige_withUnc <- function(year) {
   print(kriged_slices_unc)
   
   # this doesnt work, but I would expect it to
-  kriged_slices <- c(kriged_slices, kriged_slices_unc)
+  #kriged_slices <- c(kriged_slices, kriged_slices_unc)
   
-  # crop to spain mainland
-  kriged_slices <- st_crop(kriged_slices, st_as_sf(spain))
-  
+  # crop to spain LL region
+  kriged_slices <- st_crop(kriged_slices, spain_LL)
+  kriged_slices_unc <- st_crop(kriged_slices_unc, spain_LL)
+
+    
   # Assign the kriged_slices to the variable with the input year
-  kriged_slices_name <- paste0("kriged_slices_wunc", year)
+  kriged_slices_name <- paste0("kriged_slices_", year)
+  kriged_slices_unc_name <- paste0("kriged_slices_unc", year)
   assign(kriged_slices_name, kriged_slices, env=.GlobalEnv)
+  assign(kriged_slices_unc_name, kriged_slices_unc, env=.GlobalEnv)
   
   #return(get(kriged_slices_name))
 }

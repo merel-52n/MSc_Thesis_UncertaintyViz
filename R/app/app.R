@@ -61,8 +61,9 @@ server <- function(input, output, session) {
     map_data <- get(paste0("kriged_slices_", year))
     leaflet() |>
       addProviderTiles(providers$CartoDB.Positron) |>
+      addMouseCoordinates() |>
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-      addLegend(pal = pal, values = 30:18, title = "Temperature", position = "bottomright", opacity = 1) |>
+      addLegend(pal = pal, values = 18:30, title = "Temperature", position = "bottomright", opacity = 1) |>
       addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
   })
   
