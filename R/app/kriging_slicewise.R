@@ -19,10 +19,7 @@ library(viridisLite)
 # install.packages("devtools")
 #devtools::install_github("thomasp85/transformr")
 #library(transformr) see https://stackoverflow.com/questions/68450668/how-can-i-animate-points-on-a-spatial-map-with-gganimate-sf-and-ggplot2 
-
-# configurable variables
-years = 2010:2015
-pixelsize = 0.05
+# remotes::install_github(repo = "lydialucchesi/Vizumap", build_vignettes = TRUE, force = TRUE)
 
 # Set the path to the geopackage files
 setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/")
@@ -73,7 +70,7 @@ sliced_krige <- function(year) {
   }
   # Construct the data frame name using 'year'
   df_name <- paste0("df_mean_tmp_", year)
-
+  
   # iterate over all months
   kriged_slices_pred <- NULL
   kriged_slices_var  <- NULL
@@ -275,6 +272,7 @@ sliced_krige_withUnc <- function(year) {
   kriged_slices_difference <- st_set_dimensions(kriged_slices_difference, which = "x", values = st_get_dimension_values(kriged_slices_pred, "x", center = FALSE))
   kriged_slices_difference <- st_set_dimensions(kriged_slices_difference, which = "y", values = st_get_dimension_values(kriged_slices_pred, "y", center = FALSE))
   
+  # Restore crs (gets lost after st_set_dimensions?)
   st_crs(kriged_slices_upperbound) <- st_crs(kriged_slices_pred)
   st_crs(kriged_slices_lowerbound) <- st_crs(kriged_slices_pred)
   st_crs(kriged_slices_difference) <- st_crs(kriged_slices_pred)
@@ -282,27 +280,24 @@ sliced_krige_withUnc <- function(year) {
   # re-combine predictions and variance
   kriged_slices <- c(kriged_slices_pred,
                      kriged_slices_var)
-  print(kriged_slices)
+  
+  # to allow merging with uncertainty attributes, set point info to FALSE
+  attr(kriged_slices, "dimensions")$x$point = FALSE
+  attr(kriged_slices, "dimensions")$y$point = FALSE
   
   # re-combine upper and lower bounds
-  kriged_slices_unc <- c(kriged_slices_lowerbound,
-                         kriged_slices_upperbound,
-                         kriged_slices_difference)
-  print(kriged_slices_unc)
-  
-  # this doesnt work, but I would expect it to
-  #kriged_slices <- c(kriged_slices, kriged_slices_unc)
+  kriged_slices <- c(kriged_slices,
+                     kriged_slices_lowerbound,
+                     kriged_slices_upperbound,
+                     kriged_slices_difference)
+  print(kriged_slices)
   
   # crop to spain LL region
   kriged_slices <- st_crop(kriged_slices, spain_LL)
-  kriged_slices_unc <- st_crop(kriged_slices_unc, spain_LL)
-  
   
   # Assign the kriged_slices to the variable with the input year
   kriged_slices_name <- paste0("kriged_slices_", year)
-  kriged_slices_unc_name <- paste0("kriged_slices_unc", year)
   assign(kriged_slices_name, kriged_slices, env=.GlobalEnv)
-  assign(kriged_slices_unc_name, kriged_slices_unc, env=.GlobalEnv)
   
   #return(get(kriged_slices_name))
 }
@@ -552,32 +547,18 @@ for (year in years) {
 # pal = hcl.colors(12, palette = "Inferno", rev = TRUE)
 # pal_var = hcl.colors(12, palette = "Viridis")
 
-pal = colorNumeric(
-  viridisLite::inferno(32), 
-  #domain = range(kriged_slices_2010["mean_temp_pred", , , 3]$mean_temp_pred, na.rm = TRUE),
-  domain = range(c(18:30)), 
-  rev = TRUE,
-  na.color = "transparent"
-)
 
-pal2 = colorNumeric(
-  viridisLite::cividis(12), 
-  #domain = range(kriged_slices_2010["mean_temp_pred", , , 3]$mean_temp_pred, na.rm = TRUE),
-  domain = range(c(0.3:4.3)), 
-  rev = TRUE,
-  na.color = "transparent"
-)
 # mapviewOptions(raster.palette = pal)
 
 # temperature_map <- mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July") |>
 #   addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=125, height=48)
 
-leaflet() |>
-  addProviderTiles(providers$CartoDB.Positron) |>
-  addStarsImage(kriged_slices_2010["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-  addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright") |>
-  #addLegend(pal = pal, values = kriged_slices_2010["mean_temp_pred", , , 6], title = "Temperature", position = "bottomright") |>
-  addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+# leaflet() |>
+#   addProviderTiles(providers$CartoDB.Positron) |>
+#   addStarsImage(kriged_slices_2010["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
+#   addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright") |>
+#   #addLegend(pal = pal, values = kriged_slices_2010["mean_temp_pred", , , 6], title = "Temperature", position = "bottomright") |>
+#   addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
 
 # # leaflet version
 # leaflet() |> 
