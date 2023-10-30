@@ -1,26 +1,3 @@
-library(sf)
-library(stars)
-library(starsExtra)
-library(data.table)
-library(ggplot2)
-library(gstat)
-library(rnaturalearth)
-library(dplyr)
-library(tidyr)
-library(viridis)
-library(gifski)
-library(transformr)
-library(magick)
-library(mapview)
-library(leaflet)
-library(leafem)
-library(viridisLite)
-# See https://github.com/thomasp85/gganimate/issues/479 : so need dev version of transformr to reproduce
-# install.packages("devtools")
-#devtools::install_github("thomasp85/transformr")
-#library(transformr) see https://stackoverflow.com/questions/68450668/how-can-i-animate-points-on-a-spatial-map-with-gganimate-sf-and-ggplot2 
-# remotes::install_github(repo = "lydialucchesi/Vizumap", build_vignettes = TRUE, force = TRUE)
-
 # Set the path to the geopackage files
 setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/")
 path <- "./data"
@@ -47,20 +24,25 @@ for (year in years) {
   assign(df_name_precip, precip_mean)
 }
 
-#### define target grid ####
-grd <- make_grid(df_mean_tmp_2010, res = pixelsize) # change res as needed
-
-# Get Spain shape to crop kriging output later
-# spain_mainland_bbox <- c(xmin = -10, xmax = 5, ymin = 35, ymax = 44)
-# spain <- ne_countries(scale = "medium", country = "Spain", continent = "Europe", returnclass = "sf") |>
-#   st_crop(spain_mainland_bbox)
-
 # Read in Spanish shapefile layer
 path2 <- "./data/Spain_LL_extended_region/"
 spain_LL <- st_read(path2)
 
 # Get rid of buffer region
 spain_LL <- spain_LL[spain_LL$CATEGORY == "Guadalquivir + Pecroches (Guadiana)", ] |> st_transform(crs = 4326)
+
+#### define target grid ####
+grd <- make_grid(df_mean_tmp_2010, res = pixelsize) # change res as needed
+
+# change y offset to match the grid to the living lab region
+attr(grd, "dimensions")$y$offset <- st_bbox(spain_LL)$ymax
+
+# view grid with spanish LL
+leaflet() |> 
+  addProviderTiles(providers$CartoDB.Positron) |> 
+  addMouseCoordinates() |> 
+  addStarsImage(grd) |> 
+  addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
 
 #### function form ##### 
 sliced_krige <- function(year) {

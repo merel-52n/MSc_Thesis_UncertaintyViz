@@ -1,3 +1,16 @@
+# Load necessary libraries
+library(sf)
+library(stars)
+library(starsExtra)
+library(data.table)
+library(ggplot2)
+library(gstat)
+library(dplyr)
+library(tidyr)
+library(viridis)
+library(leaflet)
+library(leafem)
+library(viridisLite)
 library(shiny)
 
 # Configurable variables
