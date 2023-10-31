@@ -35,8 +35,7 @@ ui <- fluidPage(
                   Pick a year to display in the slider below.")),
               sliderInput("year2", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
               column(width = 6, h1("Forecast"), leafletOutput("map2_1")),
-              column(width = 6, h1("Forecast Uncertainty"), leafletOutput("map2_2")
-                     )
+              column(width = 6, h1("Forecast Uncertainty"), leafletOutput("map2_2"))
     ),
     # Page 3 "Map 3" content
     tabPanel( title = "Map 3", value = "tab3",
@@ -44,8 +43,7 @@ ui <- fluidPage(
                 p("This page depicts possible outcomes of the temperature forecast for the next year.")),
               sliderInput("year3", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
               column(width = 6, h1("Highest predicted temperature"), leafletOutput("map3_1")),
-              column(width = 6, h1("Lowest predicted temperature"), leafletOutput("map3_2")
-                     )
+              column(width = 6, h1("Lowest predicted temperature"), leafletOutput("map3_2"))
     ),
     
     # Page 4 "Map 4" content
@@ -79,9 +77,7 @@ server <- function(input, output, session) {
     map_data <- get(paste0("kriged_slices_", year))
     leafletProxy("map", data = map_data) |>
       clearGroup("Temperature") |>  # Clear the existing starsImage layer
-      #clearControls() |> # Clear the legend
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
-    #addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright")
   })
   
   output$map2_1 <- renderLeaflet({
@@ -94,30 +90,51 @@ server <- function(input, output, session) {
       addLegend(pal = pal, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1) |>
       addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
   })
-  
+
   output$map2_2 <- renderLeaflet({
     year <- years[1]
     map_data <- get(paste0("kriged_slices_", year))
-    leaflet() |>
-      addProviderTiles(providers$CartoDB.Positron) |>
-      addMouseCoordinates() |>
-      #addImageQuery() |>
-      addStarsImage(map_data["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
-      addLegend(pal = pal2, values = 0.3:4.3, title = "Possible difference (°C)", position = "bottomright", opacity = 1) |>
-      addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+  leaflet() |>
+    addProviderTiles(providers$CartoDB.Positron) |>
+    addMouseCoordinates() |>
+    addStarsImage(map_data["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
+    addLegend(pal = pal2, values = 0.3:4.3, title = "Possible difference (°C)", position = "bottomright", opacity = 1) |>
+    addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
   })
-  
-  observeEvent(input$year2, {
+
+  observeEvent(input$year2, { # update map2_1 and map2_2 based on user input
     year <- input$year2
     map_data <- get(paste0("kriged_slices_", year))
-    # update left map2_1 based on new input
     leafletProxy("map2_1", data = map_data) |>
-      clearGroup("Temperature") |>  
+      clearGroup("Temperature") |>
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
-    # update right map2_2 based on new input
     leafletProxy("map2_2", data = map_data) |>
-      clearGroup("Temperature") |>  
+      clearGroup("Temperature") |>
       addStarsImage(map_data["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7)
+  })
+  
+  observe({ # Observer to respond to zoom / pan of map1 and apply to map2
+    coords <- input$map2_1_bounds
+    
+    if (!is.null(coords)) {
+      tproxy <- leafletProxy("map2_2") |>
+        fitBounds(coords$west,
+                  coords$south,
+                  coords$east,
+                  coords$north)
+    }
+  })
+  
+  observe({ # Observer to respond to zoom / pan of map1 and apply to map2
+    coords <- input$map2_2_bounds
+    
+    if (!is.null(coords)) {
+      tproxy <- leafletProxy("map2_1") |>
+        fitBounds(coords$west,
+                  coords$south,
+                  coords$east,
+                  coords$north)
+    }
   })
   
   output$map3_1 <- renderLeaflet({
@@ -142,19 +159,40 @@ server <- function(input, output, session) {
       addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
   })
   
-  observeEvent(input$year3, {
+  observeEvent(input$year3, { # update map3_1 and map3_2 based on user input
     year <- input$year3
     map_data <- get(paste0("kriged_slices_", year))
-    # update left map3_1 based on new input
     leafletProxy("map3_1", data = map_data) |>
       clearGroup("Temperature") |>  
       addStarsImage(map_data["mean_temp_upperbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
-    # update right map3_2 based on new input
     leafletProxy("map3_2", data = map_data) |>
       clearGroup("Temperature") |>  
       addStarsImage(map_data["mean_temp_lowerbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
   })
   
+  observe({ # Observer to respond to zoom / pan of map3_1 and apply to map3_2
+    coords <- input$map3_1_bounds
+    
+    if (!is.null(coords)) {
+      tproxy <- leafletProxy("map3_2") |>
+        fitBounds(coords$west,
+                  coords$south,
+                  coords$east,
+                  coords$north)
+    }
+  })
+  
+  observe({ # Observer to respond to zoom / pan of map3_2 and apply to map3_1
+    coords <- input$map3_2_bounds
+    
+    if (!is.null(coords)) {
+      tproxy <- leafletProxy("map3_1") |>
+        fitBounds(coords$west,
+                  coords$south,
+                  coords$east,
+                  coords$north)
+    }
+  })
 }
 
 # Run the application 

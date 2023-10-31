@@ -1,5 +1,5 @@
 # Set the path to the geopackage files
-setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/")
+#setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/app")
 path <- "./data"
 
 #### Load all GeoPackage files with meteorological data from meteo-RIA API from 2010 until 2022 ####
@@ -41,7 +41,7 @@ attr(grd, "dimensions")$y$offset <- st_bbox(spain_LL)$ymax
 leaflet() |> 
   addProviderTiles(providers$CartoDB.Positron) |> 
   addMouseCoordinates() |> 
-  addStarsImage(grd) |> 
+  #addStarsImage(grd, opacity = 0.6) |> 
   addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
 
 #### function form ##### 
@@ -449,6 +449,8 @@ sliced_kriges <- function(year, variable_name) {
 for (year in years) {
   sliced_krige_withUnc(year)
 }
+
+cat("Interpolation finished")
 
 # for (year in c(2010:2011, 2013:2022)) { # 2012 causes strange error?
 #   sliced_krige_precip(year)

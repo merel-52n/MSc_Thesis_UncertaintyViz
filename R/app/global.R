@@ -1,4 +1,5 @@
 # Load necessary libraries
+library(devtools)
 library(sf)
 library(stars)
 library(starsExtra)
@@ -10,8 +11,10 @@ library(tidyr)
 library(viridis)
 library(leaflet)
 library(leafem)
+library(leafsync)
 library(viridisLite)
 library(shiny)
+library(rsconnect)
 
 # Configurable variables
 years = 2010:2015
