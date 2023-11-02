@@ -24,13 +24,6 @@ for (year in years) {
   assign(df_name_precip, precip_mean)
 }
 
-# Read in Spanish shapefile layer
-path2 <- "./data/Spain_LL_extended_region/"
-spain_LL <- st_read(path2)
-
-# Get rid of buffer region
-spain_LL <- spain_LL[spain_LL$CATEGORY == "Guadalquivir + Pecroches (Guadiana)", ] |> st_transform(crs = 4326)
-
 #### define target grid ####
 grd <- make_grid(df_mean_tmp_2010, res = pixelsize) # change res as needed
 
@@ -450,7 +443,7 @@ for (year in years) {
   sliced_krige_withUnc(year)
 }
 
-cat("Interpolation finished")
+cat("Interpolations finished")
 
 # for (year in c(2010:2011, 2013:2022)) { # 2012 causes strange error?
 #   sliced_krige_precip(year)

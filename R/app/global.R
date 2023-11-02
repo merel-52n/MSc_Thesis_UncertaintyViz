@@ -34,3 +34,10 @@ pal2 = colorNumeric(
   rev = TRUE,
   na.color = "transparent"
 )
+
+# Spanish LL shapefile layer
+path2 <- "./data/Spain_LL_extended_region/"
+spain_LL <- st_read(path2)
+
+# Get rid of buffer region
+spain_LL <- spain_LL[spain_LL$CATEGORY == "Guadalquivir + Pecroches (Guadiana)", ] |> st_transform(crs = 4326)
