@@ -50,7 +50,9 @@ ui <- fluidPage(
     # Page 4 "Map 4" content
     tabPanel( title = "Map 4", value = "tab4",
               mainPanel(
-                p("This page depicts possible outcomes of the temperature forecast for the next year.")
+                p("This page depicts possible outcomes of the temperature forecast for the next year."),
+                sliderInput("year4", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
+                plotOutput("map4")
                 )
     )
     
@@ -193,6 +195,12 @@ server <- function(input, output, session) {
                   coords$east,
                   coords$north)
     }
+  })
+  
+  output$map4 <- renderPlot({
+    year <- input$year4
+    map_data <- get(paste0("unifPixMap_", year))
+    view(map_data)
   })
 }
 
