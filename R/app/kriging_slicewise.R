@@ -25,17 +25,14 @@ for (year in years) {
 }
 
 #### define target grid ####
-grd <- make_grid(df_mean_tmp_2010, res = pixelsize) # change res as needed
-
-# change y offset to match the grid to the living lab region
-attr(grd, "dimensions")$y$offset <- st_bbox(spain_LL)$ymax
+grd <- make_grid(andalucia, res = pixelsize)
 
 # view grid with spanish LL
 leaflet() |> 
   addProviderTiles(providers$CartoDB.Positron) |> 
   addMouseCoordinates() |> 
-  #addStarsImage(grd, opacity = 0.6) |> 
-  addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+  addStarsImage(grd, opacity = 0.6) |> 
+  addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
 
 #### function form ##### 
 sliced_krige <- function(year) {
@@ -101,8 +98,8 @@ sliced_krige <- function(year) {
   kriged_slices <- c(kriged_slices_pred,
                      kriged_slices_var)
   
-  # crop to spain LL shape
-  kriged_slices <- st_crop(kriged_slices, spain_LL)
+  # crop to andalucia LL shape
+  kriged_slices <- st_crop(kriged_slices, andalucia)
   
   # Assign the kriged_slices to the variable with the input year
   kriged_slices_name <- paste0("kriged_slices_", year)
@@ -268,7 +265,7 @@ sliced_krige_withUnc <- function(year) {
   print(kriged_slices)
   
   # crop to spain LL region
-  kriged_slices <- st_crop(kriged_slices, spain_LL)
+  kriged_slices <- st_crop(kriged_slices, andalucia)
   
   # Assign the kriged_slices to the variable with the input year
   kriged_slices_name <- paste0("kriged_slices_", year)
@@ -277,173 +274,12 @@ sliced_krige_withUnc <- function(year) {
   #return(get(kriged_slices_name))
 }
 
-
-#### function form ##### 
-sliced_krige_precip <- function(year) {
-  
-  if (year < 2010 || year > 2022) {
-    stop("Input year must be between 2010 and 2022")
-  }
-  # Construct the data frame name using 'year'
-  df_name <- paste0("df_mean_precip_", year)
-  
-  # iterate over all months
-  kriged_slices_pred <- NULL
-  kriged_slices_var  <- NULL
-  
-  timeCodes <- format(as.POSIXct(paste(year, "-01-01", sep=""))+0:11*31*24*3600, "%Y-%m")
-  for(cur_month in timeCodes) { # cur_month <- timeCodes[7]
-    cat("Processing:", cur_month, "\n")
-    cur_emp_vgm <- variogram(sum_precipitation~1, get(df_name)[get(df_name)$month == cur_month,])
-    cur_mod_vgm <- fit.variogram(cur_emp_vgm, vgm(4, "Sph", 150, 0.1))
-    
-    # krige
-    cur_kriged_slice <- krige(sum_precipitation~1, get(df_name)[get(df_name)$month == cur_month,], grd, cur_mod_vgm)
-    
-    ## some visual debugging code
-    #plot(cur_emp_vgm, cur_mod_vgm)
-    #plot(get(df_name)[get(df_name)$month == cur_month,])
-    #plot(cur_kriged_slice, col = rev(heat.colors(20)))
-    
-    # merge predictions
-    cur_kriged_slice_pred <- cur_kriged_slice["var1.pred",]
-    if (!is.null(kriged_slices_pred)) {
-      kriged_slices_pred <- c(kriged_slices_pred, cur_kriged_slice_pred)
-    } else {
-      kriged_slices_pred <- cur_kriged_slice_pred
-    }
-    
-    # merge kriging variances
-    cur_kriged_slice_var <- cur_kriged_slice["var1.var",]
-    if (!is.null(kriged_slices_var)) {
-      kriged_slices_var <- c(kriged_slices_var, cur_kriged_slice_var)
-    } else {
-      kriged_slices_var <- cur_kriged_slice_var
-    }
-  }
-  
-  kriged_slices_pred <- st_redimension(kriged_slices_pred)
-  kriged_slices_pred <- st_set_dimensions(kriged_slices_pred, 
-                                          which = 3, 
-                                          names="time", 
-                                          values=timeCodes)
-  attributes(kriged_slices_pred)$names <-  "sum_precip_pred"
-  plot(kriged_slices_pred, col = rev(topo.colors(20)))
-  
-  kriged_slices_var <- st_redimension(kriged_slices_var)
-  kriged_slices_var <- st_set_dimensions(kriged_slices_var, 
-                                         which = 3, 
-                                         names="time", 
-                                         values=timeCodes)
-  attributes(kriged_slices_var)$names <- "sum_precip_variance"
-  plot(kriged_slices_var)
-  
-  # re-combine predictions and variance
-  kriged_slices <- c(kriged_slices_pred,
-                     kriged_slices_var)
-  
-  # crop to spain mainland
-  kriged_slices <- st_crop(kriged_slices, st_as_sf(spain))
-  
-  # Assign the kriged_slices to the variable with the input year
-  kriged_slices_name <- paste0("kriged_slices_precip_", year)
-  assign(kriged_slices_name, kriged_slices, env=.GlobalEnv)
-  
-  #return(get(kriged_slices_name))
-}
-
-#### Function that takes input variable precipitation or temperature ###
-# doesn't work yet...
-sliced_kriges <- function(year, variable_name) {
-  
-  if (year < 2010 || year > 2022) {
-    stop("Input year must be between 2010 and 2022")
-  }
-  if (!(variable_name %in% c("temperature", "precipitation"))) {
-    stop("Variable name must be either 'temperature' or 'precipitation'")
-  }
-  
-  # Construct the data frame name using the input variables
-  if (variable_name == "temperature") {
-    variable_name <- "mean_temperature"
-    df_name <- paste0("df_", "mean_tmp", "_", year)
-    print(df_name)
-  } else {
-    variable_name <- "sum_precipitation"
-    df_name <- paste0("df_", "mean_precip", "_", year)
-  }
-  
-  # iterate over all months
-  kriged_slices_pred <- NULL
-  kriged_slices_var  <- NULL
-  
-  timeCodes <- format(as.POSIXct(paste(year, "-01-01", sep=""))+0:11*31*24*3600, "%Y-%m")
-  for(cur_month in timeCodes) { # cur_month <- timeCodes[7]
-    cat("Processing:", cur_month, "\n")
-    print(paste(variable_name, "~1", sep=""))
-    f <- paste(variable_name, "~1", sep="")
-    cur_emp_vgm <- variogram(f, get(df_name)[get(df_name)$month == cur_month,])
-    cur_mod_vgm <- fit.variogram(cur_emp_vgm, vgm(4, "Sph", 150, 0.1))
-    
-    # krige
-    cur_kriged_slice <- krige(f, get(df_name)[get(df_name)$month == cur_month,], grd, cur_mod_vgm)
-    
-    ## some visual debugging code
-    #plot(cur_emp_vgm, cur_mod_vgm)
-    #plot(get(df_name)[get(df_name)$month == cur_month,])
-    #plot(cur_kriged_slice, col = rev(heat.colors(20)))
-    
-    # merge predictions
-    cur_kriged_slice_pred <- cur_kriged_slice["var1.pred",]
-    if (!is.null(kriged_slices_pred)) {
-      kriged_slices_pred <- c(kriged_slices_pred, cur_kriged_slice_pred)
-    } else {
-      kriged_slices_pred <- cur_kriged_slice_pred
-    }
-    
-    # merge kriging variances
-    cur_kriged_slice_var <- cur_kriged_slice["var1.var",]
-    if (!is.null(kriged_slices_var)) {
-      kriged_slices_var <- c(kriged_slices_var, cur_kriged_slice_var)
-    } else {
-      kriged_slices_var <- cur_kriged_slice_var
-    }
-  }
-  
-  kriged_slices_pred <- st_redimension(kriged_slices_pred)
-  kriged_slices_pred <- st_set_dimensions(kriged_slices_pred, 
-                                          which = 3, 
-                                          names="time", 
-                                          values=timeCodes)
-  attributes(kriged_slices_pred)$names <-  paste0(variable_name, "_pred")
-  plot(kriged_slices_pred, col = rev(heat.colors(20)))
-  
-  kriged_slices_var <- st_redimension(kriged_slices_var)
-  kriged_slices_var <- st_set_dimensions(kriged_slices_var, 
-                                         which = 3, 
-                                         names="time", 
-                                         values=timeCodes)
-  attributes(kriged_slices_var)$names <- paste0(variable_name, "_variance")
-  plot(kriged_slices_var)
-  
-  # re-combine predictions and variance
-  kriged_slices <- c(kriged_slices_pred,
-                     kriged_slices_var)
-  
-  # Assign the kriged_slices to the variable with the input year
-  kriged_slices_name <- paste0("kriged_slices_", variable_name, "_", year)
-  assign(kriged_slices_name, kriged_slices, env=.GlobalEnv)
-  
-  #return(get(kriged_slices_name))
-}
-
-
 # Run kriging interpolation for all years for temp
 for (year in years) {
   sliced_krige_withUnc(year)
 }
 
-cat("Interpolations finished")
+cat("Interpolations finished for maps 1-3 \n")
 
 # for (year in c(2010:2011, 2013:2022)) { # 2012 causes strange error?
 #   sliced_krige_precip(year)
@@ -530,12 +366,15 @@ cat("Interpolations finished")
 # temperature_map <- mapview(cropped_star["mean_temp_pred", , , 6], layer.name = "Temperature", na.color = NA, map.title = "July") |>
 #   addLogo(img = "https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", width=125, height=48)
 
-# leaflet() |>
-#   addProviderTiles(providers$CartoDB.Positron) |>
-#   addStarsImage(kriged_slices_2010["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-#   addLegend(pal = pal, values = 20:25, title = "Temperature", position = "bottomright") |>
-#   #addLegend(pal = pal, values = kriged_slices_2010["mean_temp_pred", , , 6], title = "Temperature", position = "bottomright") |>
-#   addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+map_data <- get(paste0("kriged_slices_", 2015))
+leaflet() |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  addMouseCoordinates() |>
+  addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
+  addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
+            labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))
+  ) |>
+  addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
 
 # # leaflet version
 # leaflet() |> 
@@ -573,3 +412,78 @@ cat("Interpolations finished")
 
 # Get time values
 #st_get_dimension_values(kriged_slices_2010, "time")
+
+# #### function form ##### 
+# sliced_krige_precip <- function(year) {
+#   
+#   if (year < 2010 || year > 2022) {
+#     stop("Input year must be between 2010 and 2022")
+#   }
+#   # Construct the data frame name using 'year'
+#   df_name <- paste0("df_mean_precip_", year)
+#   
+#   # iterate over all months
+#   kriged_slices_pred <- NULL
+#   kriged_slices_var  <- NULL
+#   
+#   timeCodes <- format(as.POSIXct(paste(year, "-01-01", sep=""))+0:11*31*24*3600, "%Y-%m")
+#   for(cur_month in timeCodes) { # cur_month <- timeCodes[7]
+#     cat("Processing:", cur_month, "\n")
+#     cur_emp_vgm <- variogram(sum_precipitation~1, get(df_name)[get(df_name)$month == cur_month,])
+#     cur_mod_vgm <- fit.variogram(cur_emp_vgm, vgm(4, "Sph", 150, 0.1))
+#     
+#     # krige
+#     cur_kriged_slice <- krige(sum_precipitation~1, get(df_name)[get(df_name)$month == cur_month,], grd, cur_mod_vgm)
+#     
+#     ## some visual debugging code
+#     #plot(cur_emp_vgm, cur_mod_vgm)
+#     #plot(get(df_name)[get(df_name)$month == cur_month,])
+#     #plot(cur_kriged_slice, col = rev(heat.colors(20)))
+#     
+#     # merge predictions
+#     cur_kriged_slice_pred <- cur_kriged_slice["var1.pred",]
+#     if (!is.null(kriged_slices_pred)) {
+#       kriged_slices_pred <- c(kriged_slices_pred, cur_kriged_slice_pred)
+#     } else {
+#       kriged_slices_pred <- cur_kriged_slice_pred
+#     }
+#     
+#     # merge kriging variances
+#     cur_kriged_slice_var <- cur_kriged_slice["var1.var",]
+#     if (!is.null(kriged_slices_var)) {
+#       kriged_slices_var <- c(kriged_slices_var, cur_kriged_slice_var)
+#     } else {
+#       kriged_slices_var <- cur_kriged_slice_var
+#     }
+#   }
+#   
+#   kriged_slices_pred <- st_redimension(kriged_slices_pred)
+#   kriged_slices_pred <- st_set_dimensions(kriged_slices_pred, 
+#                                           which = 3, 
+#                                           names="time", 
+#                                           values=timeCodes)
+#   attributes(kriged_slices_pred)$names <-  "sum_precip_pred"
+#   plot(kriged_slices_pred, col = rev(topo.colors(20)))
+#   
+#   kriged_slices_var <- st_redimension(kriged_slices_var)
+#   kriged_slices_var <- st_set_dimensions(kriged_slices_var, 
+#                                          which = 3, 
+#                                          names="time", 
+#                                          values=timeCodes)
+#   attributes(kriged_slices_var)$names <- "sum_precip_variance"
+#   plot(kriged_slices_var)
+#   
+#   # re-combine predictions and variance
+#   kriged_slices <- c(kriged_slices_pred,
+#                      kriged_slices_var)
+#   
+#   # crop to spain mainland
+#   kriged_slices <- st_crop(kriged_slices, st_as_sf(spain))
+#   
+#   # Assign the kriged_slices to the variable with the input year
+#   kriged_slices_name <- paste0("kriged_slices_precip_", year)
+#   assign(kriged_slices_name, kriged_slices, env=.GlobalEnv)
+#   
+#   #return(get(kriged_slices_name))
+# }
+

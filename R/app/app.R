@@ -22,11 +22,11 @@ ui <- fluidPage(
     # Page 1 "Map 1" content
     tabPanel( title = "Map 1", value = "tab1",
               mainPanel(
-                h1("Hypothetical Outcome Map"),
                 p("This page depicts possible outcomes of the temperature forecast for the next year. Click on the play-button ▶️️ in the slider to view the animation."),
-                sliderInput("year", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1], animate = animationOptions(interval = 800, loop = TRUE)),
+                sliderInput("scenario", "Select Scenario", min = 1, max = length(years), step = 1, value = 1, animate = animationOptions(interval = 800, loop = TRUE)),
+                h1("Hypothetical Outcome Map"),
                 leafletOutput("map")
-                  )
+              )
     ),
     # Page 2 "Map 2" content
     tabPanel( title = "Map 2", value = "tab2",
@@ -52,8 +52,9 @@ ui <- fluidPage(
               mainPanel(
                 p("This page depicts possible outcomes of the temperature forecast for the next year."),
                 sliderInput("year4", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
+                h1("Pixelated map"),
                 plotOutput("map4")
-                )
+              )
     )
     
   ) # close navbarpage
@@ -69,14 +70,16 @@ server <- function(input, output, session) {
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-      addLegend(pal = pal, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1) |>
-      addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+      addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
+                labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
   
   # Use observeEvent to update the layer when the input changes
   # corresponds to above map 1
-  observeEvent(input$year, {
-    year <- input$year
+  observeEvent(input$scenario, {
+    selected_scenario_index <- input$scenario
+    year <- years[selected_scenario_index]
     map_data <- get(paste0("kriged_slices_", year))
     leafletProxy("map", data = map_data) |>
       clearGroup("Temperature") |>  # Clear the existing starsImage layer
@@ -90,21 +93,23 @@ server <- function(input, output, session) {
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-      addLegend(pal = pal, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1) |>
-      addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+      addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
+                labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
-
+  
   output$map2_2 <- renderLeaflet({
     year <- years[1]
     map_data <- get(paste0("kriged_slices_", year))
-  leaflet() |>
-    addProviderTiles(providers$CartoDB.Positron) |>
-    addMouseCoordinates() |>
-    addStarsImage(map_data["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
-    addLegend(pal = pal2, values = 0.3:4.3, title = "Possible difference (°C)", position = "bottomright", opacity = 1) |>
-    addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+    leaflet() |>
+      addProviderTiles(providers$CartoDB.Positron) |>
+      addMouseCoordinates() |>
+      addStarsImage(map_data["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
+      addLegend(pal = pal2_legend, values = 0.3:4.3, title = "Possible difference (°C)", position = "bottomright", opacity = 1,
+                labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
-
+  
   observeEvent(input$year2, { # update map2_1 and map2_2 based on user input
     year <- input$year2
     map_data <- get(paste0("kriged_slices_", year))
@@ -147,8 +152,9 @@ server <- function(input, output, session) {
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
       addStarsImage(map_data["mean_temp_upperbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-      addLegend(pal = pal, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1) |>
-      addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+      addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
+                labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
   
   output$map3_2 <- renderLeaflet({
@@ -158,8 +164,9 @@ server <- function(input, output, session) {
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
       addStarsImage(map_data["mean_temp_lowerbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
-      addLegend(pal = pal, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1) |>
-      addPolygons(data = spain_LL, fill = FALSE, color = "red", weight = 2)
+      addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
+                labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
   
   observeEvent(input$year3, { # update map3_1 and map3_2 based on user input
