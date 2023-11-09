@@ -281,6 +281,21 @@ for (year in years) {
 
 cat("Interpolations finished for maps 1-3 \n")
 
+cat("Performing caluclations on stars objects... \n")
+
+# Store all data from month June for all years in one stars object to do some computations
+# depends on config variable 'years' in global.R
+combined_stars_data <- get(paste0("kriged_slices_", years[1]))[, , , 6]
+for (i in 2:length(years)) {
+  year <- years[i]
+  dataset_name <- get(paste0("kriged_slices_", year))[, , , 6]
+  combined_stars_data <- c(combined_stars_data, dataset_name)
+}
+
+mean_temps_june <- st_apply(combined_stars_data, c("x", "y"), mean)
+min_temps_june <- st_apply(combined_stars_data, c("x", "y"), min)
+max_temps_june <- st_apply(combined_stars_data, c("x", "y"), max)
+
 # for (year in c(2010:2011, 2013:2022)) { # 2012 causes strange error?
 #   sliced_krige_precip(year)
 # }

@@ -52,10 +52,11 @@ pal2_legend = colorNumeric(
 )
 
 # Download Spain regions and crop to Andalucia
-spain <- ne_states(country = "Spain", returnclass = "sf")
-andalucia <- spain[spain$region == "Andalucía", ] |> select(name)
+spain_states <- ne_states(country = "Spain", returnclass = "sf")
+andalucia_states <- spain_states[spain_states$region == "Andalucía", ] |> select(name)
+andalucia <- st_union(andalucia_states)
 
 # View Andalucia shape
 leaflet() |> 
-  addProviderTiles(providers$CartoDB.Positron) |> 
-  addPolygons(data = andalucia, fill = FALSE)
+  addProviderTiles(providers$CartoDB.Positron) |>
+  addPolygons(data = st_union(andalucia_states), fill = FALSE)

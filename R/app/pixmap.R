@@ -1,5 +1,5 @@
 # prepare Andalucia shape as SpatialPolygonsDataFrame, as this is required by Vizumap package
-andalucia_sp <- andalucia |> 
+andalucia_sp <- andalucia_states |> 
   as_Spatial(cast = TRUE, IDs = paste0("ID", seq_along(from)))
 cat("Starting pixelation for map 4... \n")
 pix <- pixelate(andalucia_sp, id = "region")
@@ -15,8 +15,8 @@ create_pixmap <- function(year, sp_data, pix) {
   ##
   df_mean_tmp_year <- get(paste("df_mean_tmp_", year, sep = ""))
   
-  # Filter the data based on the year
-  joined <- st_join(df_mean_tmp_year, andalucia)
+  # Filter the data based on the year, select june from each dataset
+  joined <- st_join(df_mean_tmp_year, andalucia_states)
   data <- joined |>
     filter(month == paste(year, "-06", sep = "")) |>
     group_by(name) |>

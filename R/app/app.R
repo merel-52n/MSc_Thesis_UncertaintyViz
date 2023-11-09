@@ -22,27 +22,26 @@ ui <- fluidPage(
     # Page 1 "Map 1" content
     tabPanel( title = "Map 1", value = "tab1",
               mainPanel(
-                p("This page depicts possible outcomes of the temperature forecast for the next year. Click on the play-button ▶️️ in the slider to view the animation."),
-                sliderInput("scenario", "Select Scenario", min = 1, max = length(years), step = 1, value = 1, animate = animationOptions(interval = 800, loop = TRUE)),
+                p("This page depicts possible outcomes of the temperature forecast for June 2030. Click on the play-button ▶️️ in the slider to view the animation."),
+                sliderInput("scenario", "Scenario", min = 1, max = length(years), step = 1, value = 1, animate = animationOptions(interval = 800, loop = TRUE)),
                 h1("Hypothetical Outcome Map"),
                 leafletOutput("map")
               )
     ),
     # Page 2 "Map 2" content
+    
     tabPanel( title = "Map 2", value = "tab2",
               mainPanel(
-                p("This page depicts two maps: the left one displays the temperature forecast for the selected year.
-                  The map on the right shows the associated uncertainty of the forecast.
-                  Pick a year to display in the slider below.")),
-              sliderInput("year2", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
+                p("This page depicts two maps: the left one displays the temperature forecast for June 2030.
+                  The map on the right shows the associated uncertainty of the forecast.")),
               column(width = 6, h1("Forecast"), leafletOutput("map2_1")),
               column(width = 6, h1("Forecast Uncertainty"), leafletOutput("map2_2"))
     ),
     # Page 3 "Map 3" content
     tabPanel( title = "Map 3", value = "tab3",
               mainPanel(
-                p("This page depicts possible outcomes of the temperature forecast for the next year.")),
-              sliderInput("year3", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
+                p("This page depicts highest and lowest possibilities of the temperature forecast for June 2030.
+                  The left map displays the highest possible temperature, and the right one the highest.")),
               column(width = 6, h1("Highest predicted temperature"), leafletOutput("map3_1")),
               column(width = 6, h1("Lowest predicted temperature"), leafletOutput("map3_2"))
     ),
@@ -50,7 +49,8 @@ ui <- fluidPage(
     # Page 4 "Map 4" content
     tabPanel( title = "Map 4", value = "tab4",
               mainPanel(
-                p("This page depicts possible outcomes of the temperature forecast for the next year."),
+                p("This page depicts possible outcomes of the temperature forecast for June 2030. 
+                  For each region, "),
                 sliderInput("year4", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
                 h1("Pixelated map"),
                 plotOutput("map4")
@@ -62,7 +62,7 @@ ui <- fluidPage(
 
 #### Server ####
 server <- function(input, output, session) {
-  # Create initial map 1
+  # Tab 1 config
   output$map <- renderLeaflet({
     year <- years[1]
     map_data <- get(paste0("kriged_slices_", year))
@@ -86,39 +86,35 @@ server <- function(input, output, session) {
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
   })
   
+  # Tab 2 config
   output$map2_1 <- renderLeaflet({
-    year <- years[1]
-    map_data <- get(paste0("kriged_slices_", year))
     leaflet() |>
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
-      addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
+      addStarsImage(mean_temps_june["mean_temp_pred"], layerId = "Temperature", colors = pal, opacity = 0.7) |>
       addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
       addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
   
   output$map2_2 <- renderLeaflet({
-    year <- years[1]
-    map_data <- get(paste0("kriged_slices_", year))
     leaflet() |>
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
-      addStarsImage(map_data["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
+      addStarsImage(mean_temps_june["mean_temp_difference"], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
       addLegend(pal = pal2_legend, values = 0.3:4.3, title = "Possible difference (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
       addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
   
-  observeEvent(input$year2, { # update map2_1 and map2_2 based on user input
-    year <- input$year2
-    map_data <- get(paste0("kriged_slices_", year))
-    leafletProxy("map2_1", data = map_data) |>
-      clearGroup("Temperature") |>
-      addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
-    leafletProxy("map2_2", data = map_data) |>
-      clearGroup("Temperature") |>
-      addStarsImage(map_data["mean_temp_difference", , , 6], layerId = "Temperature", colors = pal2, opacity = 0.7)
+  # set zoom level back to 7 when tab for map2 tab is selected
+  observe({
+    if (input$navbar == "tab2") {
+      leafletProxy("map2_1") |>
+        setView(lng = -4.61, lat = 37.41, zoom = 7)
+      leafletProxy("map2_2") |>
+        setView(lng = -4.61, lat = 37.41, zoom = 7)
+    }
   })
   
   observe({ # Observer to respond to zoom / pan of map1 and apply to map2
@@ -145,41 +141,37 @@ server <- function(input, output, session) {
     }
   })
   
+  # Tab 3 config
   output$map3_1 <- renderLeaflet({
-    year <- years[1]
-    map_data <- get(paste0("kriged_slices_", year))
     leaflet() |>
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
-      addStarsImage(map_data["mean_temp_upperbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
+      addStarsImage(max_temps_june["mean_temp_pred"], layerId = "Temperature", colors = pal, opacity = 0.7) |>
       addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
       addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
   
   output$map3_2 <- renderLeaflet({
-    year <- years[1]
-    map_data <- get(paste0("kriged_slices_", year))
     leaflet() |>
       addProviderTiles(providers$CartoDB.Positron) |>
       addMouseCoordinates() |>
-      addStarsImage(map_data["mean_temp_lowerbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
+      addStarsImage(min_temps_june["mean_temp_pred"], layerId = "Temperature", colors = pal, opacity = 0.7) |>
       addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
       addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
   })
   
-  observeEvent(input$year3, { # update map3_1 and map3_2 based on user input
-    year <- input$year3
-    map_data <- get(paste0("kriged_slices_", year))
-    leafletProxy("map3_1", data = map_data) |>
-      clearGroup("Temperature") |>  
-      addStarsImage(map_data["mean_temp_upperbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
-    leafletProxy("map3_2", data = map_data) |>
-      clearGroup("Temperature") |>  
-      addStarsImage(map_data["mean_temp_lowerbound", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7)
+  # set zoom level back to 7 when tab for map2 tab is selected
+  observe({
+    if (input$navbar == "tab3") {
+      leafletProxy("map3_1") |>
+        setView(lng = -4.61, lat = 37.41, zoom = 7)
+      leafletProxy("map3_2") |>
+        setView(lng = -4.61, lat = 37.41, zoom = 7)
+    }
   })
-  
+
   observe({ # Observer to respond to zoom / pan of map3_1 and apply to map3_2
     coords <- input$map3_1_bounds
     
@@ -204,6 +196,7 @@ server <- function(input, output, session) {
     }
   })
   
+  # Tab 4 config
   output$map4 <- renderPlot({
     year <- input$year4
     map_data <- get(paste0("unifPixMap_", year))
