@@ -33,15 +33,15 @@ ui <- fluidPage(
     tabPanel( title = "Map 2", value = "tab2",
               mainPanel(
                 p("This page depicts two maps: the left one displays the temperature forecast for June 2030.
-                  The map on the right shows the associated uncertainty of the forecast.")),
+                  The map on the right shows the associated uncertainty of the forecast. The associated uncertainty is the possible difference in °C betweeen the actual temperature and the forecasted temperature.")),
               column(width = 6, h1("Forecast"), leafletOutput("map2_1")),
-              column(width = 6, h1("Forecast Uncertainty"), leafletOutput("map2_2"))
+              column(width = 6, h1("Possible difference"), leafletOutput("map2_2"))
     ),
     # Page 3 "Map 3" content
     tabPanel( title = "Map 3", value = "tab3",
               mainPanel(
                 p("This page depicts highest and lowest possibilities of the temperature forecast for June 2030.
-                  The left map displays the highest possible mean temperature, and the right one the highest.")),
+                  The left map displays the highest possible mean temperature, and the right one the lowest.")),
               column(width = 6, h1("Highest predicted temperature"), leafletOutput("map3_1")),
               column(width = 6, h1("Lowest predicted temperature"), leafletOutput("map3_2"))
     ),
