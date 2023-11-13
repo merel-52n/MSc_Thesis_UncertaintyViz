@@ -15,8 +15,8 @@ ui <- fluidPage(
              mainPanel(
                img(src="https://icisk.eu/wp-content/uploads/2022/01/icisk_logo_full.png", style = "height: 50%; width: 50%; margin: 1px 1px;"),
                h1("Uncertainty visualization questionnaire"),
-               p("This webpage exhibits some examples for the visualization of uncertainty in temperature and precipitation forecasts for Living Lab Andalusia in Spain 🇪🇸 in the I-CISK project."),
-               p("Navigate through the top bar to explore the different visualizations. You use these later for the questionnaire.")
+               p("This webpage exhibits some examples for map visualization of uncertainty in temperature forecasts for Living Lab Andalusia in Spain 🇪🇸 in the I-CISK project."),
+               p("Navigate through the top bar to explore the different visualizations. You use these to answer the questionnaire.")
              )
     ),
     # Page 1 "Map 1" content
