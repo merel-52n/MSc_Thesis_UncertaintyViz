@@ -15,8 +15,18 @@ library(leafsync)
 library(viridisLite)
 library(shiny)
 library(rsconnect)
-library(Vizumap)
 library(rnaturalearth)
+devtools::install_github("https://github.com/cran/rgeos/tree/master")
+devtools::install_github("https://github.com/cran/maptools/tree/master")
+remotes::install_github(repo = "lydialucchesi/Vizumap", build_vignettes = TRUE, force = TRUE)
+require(rgeos)
+require(maptools)
+require(Vizumap)
+
+# Load kriging data
+load("./data/kriged_means.RData")
+load("./data/kriged_slices_data.RData")
+load("./data/unifPixMap.RData")
 
 # Configurable variables
 years = 2010:2015

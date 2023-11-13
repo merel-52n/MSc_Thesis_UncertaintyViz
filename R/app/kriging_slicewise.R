@@ -232,7 +232,12 @@ leaflet() |>
             labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
   addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
 
-# Save things as .RData file
-# Create an empty list to store kriged_slices objects
-kriged_slices_list <- list()
+#### Save relevant items as .RData file ####
+kriged_slices_list <- c()
+for (year in years) {
+  kriged_slices_list <- c(kriged_slices_list, (paste0("kriged_slices_", year)))
+}
+save(list = kriged_slices_list, file = "kriged_slices_data.RData", compress = FALSE)
 
+kriged_means <- c("mean_temps_june", "min_temps_june", "max_temps_june")
+save(list = kriged_means, file = "kriged_means.RData", compress = FALSE)

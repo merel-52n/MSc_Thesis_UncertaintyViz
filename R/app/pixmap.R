@@ -41,3 +41,5 @@ create_pixmap <- function(sp_data, pix) {
 }
 
 create_pixmap(andalucia_sp, pix)
+
+save(unifPixMap, file = "unifPixMap.RData", compress = FALSE)
