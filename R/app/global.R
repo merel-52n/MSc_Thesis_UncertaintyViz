@@ -56,7 +56,16 @@ spain_states <- ne_states(country = "Spain", returnclass = "sf")
 andalucia_states <- spain_states[spain_states$region == "Andalucía", ] |> select(name)
 andalucia <- st_union(andalucia_states)
 
-# View Andalucia shape
+# Location A for in the Leaflet map as marker for reference
+locationA <- data.frame(
+  lon = -5.89,
+  lat = 37.56
+)
+
+# View Andalucia shape with the marker for location A
 leaflet() |> 
   addProviderTiles(providers$CartoDB.Positron) |>
-  addPolygons(data = st_union(andalucia_states), fill = FALSE)
+  addMouseCoordinates() |>
+  addPolygons(data = st_union(andalucia_states), fill = FALSE) |>
+  addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
+

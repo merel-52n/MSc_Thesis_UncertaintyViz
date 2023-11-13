@@ -41,7 +41,7 @@ ui <- fluidPage(
     tabPanel( title = "Map 3", value = "tab3",
               mainPanel(
                 p("This page depicts highest and lowest possibilities of the temperature forecast for June 2030.
-                  The left map displays the highest possible temperature, and the right one the highest.")),
+                  The left map displays the highest possible mean temperature, and the right one the highest.")),
               column(width = 6, h1("Highest predicted temperature"), leafletOutput("map3_1")),
               column(width = 6, h1("Lowest predicted temperature"), leafletOutput("map3_2"))
     ),
@@ -49,9 +49,9 @@ ui <- fluidPage(
     # Page 4 "Map 4" content
     tabPanel( title = "Map 4", value = "tab4",
               mainPanel(
-                p("This page depicts possible outcomes of the temperature forecast for June 2030. 
-                  For each region, "),
-                sliderInput("year4", "Select Year", min = years[1], max = years[length(years)], step = 1, value = years[1]),
+                p("This page depicts the mean temperature forecast for June 2030 on a pixel map. 
+                  This pixel map was made by breaking down areas into tiny dots (pixels) and giving each dot a value based on how confident we are in our estimate or its frequency in that area."
+                  ),
                 h1("Pixelated map"),
                 plotOutput("map4")
               )
@@ -72,7 +72,8 @@ server <- function(input, output, session) {
       addStarsImage(map_data["mean_temp_pred", , , 6], layerId = "Temperature", colors = pal, opacity = 0.7) |>
       addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
-      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2) |>
+      addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
   })
   
   # Use observeEvent to update the layer when the input changes
@@ -94,7 +95,8 @@ server <- function(input, output, session) {
       addStarsImage(mean_temps_june["mean_temp_pred"], layerId = "Temperature", colors = pal, opacity = 0.7) |>
       addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
-      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2) |>
+      addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
   })
   
   output$map2_2 <- renderLeaflet({
@@ -104,7 +106,8 @@ server <- function(input, output, session) {
       addStarsImage(mean_temps_june["mean_temp_difference"], layerId = "Temperature", colors = pal2, opacity = 0.7) |>
       addLegend(pal = pal2_legend, values = 0.3:4.3, title = "Possible difference (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
-      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2) |>
+      addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
   })
   
   # set zoom level back to 7 when tab for map2 tab is selected
@@ -149,7 +152,8 @@ server <- function(input, output, session) {
       addStarsImage(max_temps_june["mean_temp_pred"], layerId = "Temperature", colors = pal, opacity = 0.7) |>
       addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
-      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2) |>
+      addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
   })
   
   output$map3_2 <- renderLeaflet({
@@ -159,7 +163,8 @@ server <- function(input, output, session) {
       addStarsImage(min_temps_june["mean_temp_pred"], layerId = "Temperature", colors = pal, opacity = 0.7) |>
       addLegend(pal = pal_legend, values = 18:30, title = "Temperature (°C)", position = "bottomright", opacity = 1,
                 labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
-      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
+      addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2) |>
+      addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
   })
   
   # set zoom level back to 7 when tab for map2 tab is selected
@@ -198,9 +203,10 @@ server <- function(input, output, session) {
   
   # Tab 4 config
   output$map4 <- renderPlot({
-    year <- input$year4
-    map_data <- get(paste0("unifPixMap_", year))
-    view(map_data)
+    map_data <- get(paste0("unifPixMap"))
+    view(map_data) + 
+      geom_point(data = locationA, aes(x = lon, y = lat), shape = 1, stroke = 2, size = 5) + 
+      scale_shape(solid = FALSE)
   })
 }
 
