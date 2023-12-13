@@ -15,10 +15,7 @@ library(leafsync)
 library(viridisLite)
 library(shiny)
 library(rsconnect)
-library(rnaturalearth)
-devtools::install_github("https://github.com/cran/rgeos/tree/master")
-devtools::install_github("https://github.com/cran/maptools/tree/master")
-remotes::install_github(repo = "lydialucchesi/Vizumap", build_vignettes = TRUE, force = TRUE)
+#library(rnaturalearth)
 require(rgeos)
 require(maptools)
 require(Vizumap)
@@ -27,10 +24,11 @@ require(Vizumap)
 load("./data/kriged_means.RData")
 load("./data/kriged_slices_data.RData")
 load("./data/unifPixMap.RData")
+load("./data/shapes.RData")
 
 # Configurable variables
 years = 2010:2015
-pixelsize = 0.05
+pixelsize = 0.04
 
 # Color palettes for the different maps
 pal = colorNumeric(
@@ -62,14 +60,20 @@ pal2_legend = colorNumeric(
 )
 
 # Download Spain regions and crop to Andalucia
-spain_states <- ne_states(country = "Spain", returnclass = "sf")
-andalucia_states <- spain_states[spain_states$region == "Andalucía", ] |> select(name)
-andalucia <- st_union(andalucia_states)
+# spain_states <- ne_states(country = "Spain", returnclass = "sf")
+# andalucia_states <- spain_states[spain_states$region == "Andalucía", ] |> select(name)
+# andalucia <- st_union(andalucia_states)
+#save(list = c("spain_states", "andalucia_states", "andalucia"), file = "shapes.RData", compress = FALSE)
 
 # Location A for in the Leaflet map as marker for reference
 locationA <- data.frame(
   lon = -5.89,
   lat = 37.56
+)
+
+locationB <- data.frame(
+ lon = -3.54,
+ lat = 37.03 
 )
 
 # View Andalucia shape with the marker for location A
@@ -78,4 +82,5 @@ leaflet() |>
   addMouseCoordinates() |>
   addPolygons(data = st_union(andalucia_states), fill = FALSE) |>
   addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
+
 

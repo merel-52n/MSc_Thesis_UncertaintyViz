@@ -1,5 +1,5 @@
 # Set the path to the geopackage files
-#setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/app")
+setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/app")
 path <- "./data"
 
 #### Load all GeoPackage files with meteorological data from meteo-RIA API from 2010 until 2022 ####

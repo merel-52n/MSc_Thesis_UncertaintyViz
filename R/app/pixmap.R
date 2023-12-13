@@ -25,7 +25,9 @@ create_pixmap <- function(sp_data, pix) {
       variance = mean(mean_temp_variance)
     )
   
-  data <- read.uv(data = as.data.frame(data), estimate = "mean_temp", error = "variance")
+  print(colnames(data))
+  colnames(data) <- c("name", "Temperature (°C)", "variance", "geometry")
+  data <- read.uv(data = as.data.frame(data), estimate = "Temperature (°C)", error = "variance")
   
   df <- data.frame(region = sapply(slot(sp_data, "polygons"), function(x) slot(x, "ID")), name = unique(sp_data@data$name))
   data$region <- df[match(data$name, df$name), 1]
