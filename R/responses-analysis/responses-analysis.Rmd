@@ -1,0 +1,84 @@
+---
+title: "Questionnaire Data Analysis"
+author: "Merel Vogel"
+date: "2023-12-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## Quantification questions
+below, we read in the data and show a summary of the survey answers that have numeric values. These questions were the quantification questions on providing minimum and maximum estimates for each of the four maps. 
+```{r read in data}
+library(dplyr)
+setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/responses-analysis/")
+answers_path <- ("./data/MSc_Thesis_Questionnaire.csv")
+df <- read.csv(answers_path)
+num_df <- df |>
+  select(where(is.numeric))
+summary(num_df)
+```
+Now, to ease data manipulation and visualization, we exchange the column names from the literal survey questions to "map1_min", "map1_max", etc:
+```{r}
+library(tidyr)
+colnames(num_df)
+colnames(num_df) <- c("map1_min", "map1_max", "map2_min", "map2_max", "map3_min", "map3_max", "map4_min", "map4_max")
+colnames(num_df)
+num_df <- pivot_longer(num_df, cols = everything())
+custom_order <- c("map1_min", "map2_min", "map3_min", "map4_min", "map1_max", "map2_max", "map3_max", "map4_max")
+num_df$name <- factor(num_df$name, levels = custom_order)
+```
+
+We can now use the new dataframe to create some visualizations.
+```{r plots}
+library(ggplot2)
+library(ggridges)
+
+y_labels <- rev(c("Map 4: Maximum", "Map 3: Maximum", "Map 2: Maximum", "Map 1: Maximum", "Map 4: Minimum", "Map 3: Minimum", "Map 2: Minimum", "Map 1: Minimum"))
+real_lines_text <- data.frame(
+  x = c(22, 27),
+  label = c("real minimum", "real maximum")
+)
+
+
+ggplot(num_df, aes(x=value, y=name, fill = after_stat(x))) +
+  geom_density_ridges_gradient() +
+  scale_fill_viridis_c(name = "Estimated Temperature (°C)", option = "C", direction = -1) +
+  scale_y_discrete(labels = y_labels) +
+  # geom_vline(xintercept=22, linetype="dashed", color = "red") +
+  # geom_vline(xintercept=27, linetype="dashed", color = "red") +
+  geom_segment(aes(x = 22, y = 1, xend = 22, yend = 5, color="#fec44f")) +
+  #annotate("text", x=19.5, y=0.7, label="Real min. temp.", color = "blue") +
+  geom_segment(aes(x = 28, y = 5, xend = 28, yend = 10, color = "#d95f0e")) +
+  #annotate("text", x=29.4, y=9.2, label="Real max. temp.", color = "red") +
+  scale_color_identity(name = "Real Temperature (°C)", guide = "legend",  
+                    breaks = c("#fec44f", "#d95f0e"), labels = c("Minimum", "Maximum")) +
+  labs(
+    x = "Estimated Temperature (°C)",   
+    y = "Map",   
+    title = "Survey Temperature Estimates for Minimum and Maximum Values (in °C)" 
+  )
+```
+
