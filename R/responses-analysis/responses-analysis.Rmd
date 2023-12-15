@@ -8,77 +8,176 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# Data analysis of survey answers
+This file is the data analysis part of a master thesis on uncertainty visualizations in climate projections on maps. The aim is that this file takes the reader through the analysis steps that were taken, and shows some results of the questionnaire that was done. 
 
 ## Quantification questions
-below, we read in the data and show a summary of the survey answers that have numeric values. These questions were the quantification questions on providing minimum and maximum estimates for each of the four maps. 
-```{r read in data}
+In this section, the quantification questions are analysed. In order to do so, we read in the data, select the questions from the csv data which contains the survey answers, and plot the results in density plots. 
+
+### Data prep
+Below, we read in the data and show a summary of the survey answers that have numeric values. These questions were the quantification questions on providing minimum and maximum estimates for each of the four maps. In addition, to ease data manipulation and visualization, we exchange the column names from the literal survey questions to "map1_min", "map1_max", etc., and split the answers for the minimum estimates and maximum estimates into two separate dataframes. Change the working directory here if you are running the file yourself.
+```{r data prep, message = FALSE}
 library(dplyr)
+library(tidyr)
+
 setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/responses-analysis/")
 answers_path <- ("./data/MSc_Thesis_Questionnaire.csv")
 df <- read.csv(answers_path)
+
 num_df <- df |>
   select(where(is.numeric))
-summary(num_df)
-```
-Now, to ease data manipulation and visualization, we exchange the column names from the literal survey questions to "map1_min", "map1_max", etc:
-```{r}
-library(tidyr)
-colnames(num_df)
+
 colnames(num_df) <- c("map1_min", "map1_max", "map2_min", "map2_max", "map3_min", "map3_max", "map4_min", "map4_max")
-colnames(num_df)
 num_df <- pivot_longer(num_df, cols = everything())
 custom_order <- c("map1_min", "map2_min", "map3_min", "map4_min", "map1_max", "map2_max", "map3_max", "map4_max")
 num_df$name <- factor(num_df$name, levels = custom_order)
+
+# Separate min and max into two dataframes
+min_df <- num_df |> filter(grepl("_min$", name))
+max_df <- num_df |> filter(grepl("_max$", name))
 ```
 
-We can now use the new dataframe to create some visualizations.
-```{r plots}
+### Mean values
+To get a first impression, we calculate the mean per map for the minimum and maximum questions. 
+```{r mean values}
+map1_min <- num_df |> filter(grepl("map1_min", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+map2_min <- num_df |> filter(grepl("map2_min", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+map3_min <- num_df |> filter(grepl("map3_min", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+map4_min <- num_df |> filter(grepl("map4_min", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+map1_max <- num_df |> filter(grepl("map1_max", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+map2_max <- num_df |> filter(grepl("map2_max", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+map3_max <- num_df |> filter(grepl("map3_max", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+map4_max <- num_df |> filter(grepl("map4_max", name)) |> summarise(mean_temp = mean(value)) |> as.numeric() |> round(digits = 2)
+
+cat("Mean estimated value for minimum:\n",
+    "Map 1: ", map1_min, "°C \n",
+    "Map 2: ", map2_min, "°C \n",
+    "Map 3: ", map3_min, "°C \n",
+    "Map 4: ", map4_min, "°C \n")
+
+cat("Mean estimated value for maximum:\n",
+    "Map 1: ", map1_max, "°C \n",
+    "Map 2: ", map2_max, "°C \n",
+    "Map 3: ", map3_max, "°C \n",
+    "Map 4: ", map4_max, "°C \n")
+```
+As we can see, for the minimum estimates, all maps performed relatively close to each other, and maps 1, 3 and 4 were also within half a degree Celsius difference from the real minimum value of 22.75 °C. For map 2, the contrast was slightly higher, the mean estimate being 0.85 °C different from the mean. As for the maximum estimates, it can be observed that map 1, 2 and 3 were very close to the actual real maximum value of 25.93 °C, with map 3 having only a small difference of 0.24 °C. For map 4, there was a bigger difference of 1,87 °C between the mean estimates and the real value, which was the biggest difference across all questions. 
+
+### Density Plots
+We can now use the new dataframe to create some visualizations using `ggplot2` and `ggridges`.
+
+```{r plot minimum}
 library(ggplot2)
 library(ggridges)
 
-y_labels <- rev(c("Map 4: Maximum", "Map 3: Maximum", "Map 2: Maximum", "Map 1: Maximum", "Map 4: Minimum", "Map 3: Minimum", "Map 2: Minimum", "Map 1: Minimum"))
-real_lines_text <- data.frame(
-  x = c(22, 27),
-  label = c("real minimum", "real maximum")
-)
+y_labels <- c("Map 1", "Map 2", "Map 3", "Map 4")
 
-
-ggplot(num_df, aes(x=value, y=name, fill = after_stat(x))) +
+ggplot(min_df, aes(x=value, y=name, fill = after_stat(x))) +
   geom_density_ridges_gradient() +
   scale_fill_viridis_c(name = "Estimated Temperature (°C)", option = "C", direction = -1) +
   scale_y_discrete(labels = y_labels) +
-  # geom_vline(xintercept=22, linetype="dashed", color = "red") +
-  # geom_vline(xintercept=27, linetype="dashed", color = "red") +
-  geom_segment(aes(x = 22, y = 1, xend = 22, yend = 5, color="#fec44f")) +
-  #annotate("text", x=19.5, y=0.7, label="Real min. temp.", color = "blue") +
-  geom_segment(aes(x = 28, y = 5, xend = 28, yend = 10, color = "#d95f0e")) +
-  #annotate("text", x=29.4, y=9.2, label="Real max. temp.", color = "red") +
-  scale_color_identity(name = "Real Temperature (°C)", guide = "legend",  
-                    breaks = c("#fec44f", "#d95f0e"), labels = c("Minimum", "Maximum")) +
+  geom_segment(aes(x = 22.75, y = 1, xend = 22.75, yend = 6, color="#fec44f"), linewidth = 1) +
+  scale_color_identity(name = "", guide = "legend",  
+                    breaks = c("#fec44f"), labels = c("Real Minimum Temperature (°C)")) +
   labs(
     x = "Estimated Temperature (°C)",   
     y = "Map",   
-    title = "Survey Temperature Estimates for Minimum and Maximum Values (in °C)" 
-  )
+    title = "Survey Temperature Estimates for Minimum Values (in °C)")
 ```
+
+```{r plot maximum}
+ggplot(max_df, aes(x=value, y=name, fill = after_stat(x))) +
+  geom_density_ridges_gradient() +
+  scale_fill_viridis_c(name = "Estimated Temperature (°C)", option = "C", direction = -1) +
+  scale_y_discrete(labels = y_labels) +
+  geom_segment(aes(x = 25.93, y = 1, xend = 25.93, yend = 6, color = "#fec44f"), linewidth = 1) +
+  scale_color_identity(name = "", guide = "legend",  
+                    breaks = c("#fec44f"), labels = c("Real Maximum Temperature (°C)")) +
+  labs(
+    x = "Estimated Temperature (°C)",   
+    y = "Map",   
+    title = "Survey Temperature Estimates for Maximum Values (in °C)")
+
+```
+
+In the above plots, the patterns previously described can be observed visually - namely that map 1, 3 and 4 have a mean close to the real value for the minimum estimates, and for the maximum estimates, map 1, 2 and 3 are close to the real value. Furthermore, these plots also show that the answers do not differ a lot, i.e. users responded answers that lie very close to each other. It can also be observed that there were no significant outliers. 
+
+## Uncertainty questions
+This section tries to analyse the results of the questions on uncertainty. To do this, as a first step we take the original dataframe and subset the columns that contain the answer to the question "How certain is it that the mean temperature at the left encircled area will reach a temperature above 25 °C?" and the question "Is it more likely that the temperature at the left encircled area or the right encircled area will be below 23 °C?". Some data preparation has to be done in this section as well, as there were some typos in the dataset. Finally, the results are shown in barcharts. 
+
+```{r uncertainty questions}
+col_name_unc_above <- colnames(df)[7]
+col_name_unc_below <- colnames(df)[8]
+unc_above_df <- df |> select(contains(col_name_unc_above))
+colnames(unc_above_df) <- c("Map1 ", "Map 2", "Map 3", "Map 4")
+unc_above_df <- pivot_longer(unc_above_df, cols = everything())
+unc_below_df <- df |> select(contains(col_name_unc_below))
+colnames(unc_below_df) <- c("Map 1", "Map 2", "Map 3", "Map 4")
+unc_below_df <- pivot_longer(unc_below_df, cols = everything())
+```
+### Data cleaning: typo correction
+During the survey rollout, one of the users saw that there was a small mistake in one of the possible answers. The answer said "The right encircled area is more likely to reach a temperature below 23 °C than the right encircled area", while, of course, that should have been "The right encircled area is more likely to reach a temperature below 23 °C than the left encircled area". This was corrected after the survey was filled out 5 times, but should not affect the results. The typo is corrected below in those first five answers. There was also one period-symbol (".") too much which was corrected after one response.
+```{r}
+
+# Replace faulty answer options with correct ones
+faulty_value <- unique(unc_below_df$value)[1]
+replacement_value <- unique(unc_below_df$value)[5]
+unc_below_df <- unc_below_df |>
+  mutate(value = if_else(value == faulty_value, replacement_value, value))
+
+faulty_value2 <- "The left encircled area is more likely to reach a temperature below 23 °C than the right encircled area.."
+replacement_value2 <- "The left encircled area is more likely to reach a temperature below 23 °C than the right encircled area." 
+unc_below_df <- unc_below_df |>
+  mutate(value = if_else(value == faulty_value2, replacement_value2, value))
+
+faulty_value3 <- "It’s not possible to derive that from this map"
+replacement_value3 <- "It’s not possible to derive that from this map."
+unc_below_df <- unc_below_df |>
+  mutate(value = if_else(value == faulty_value3, replacement_value3, value))
+
+correct_answer_wcheck <- "Somewhat certain ✅ "
+correct_answer <- "Somewhat certain"
+unc_above_df <- unc_above_df |>
+  mutate(value = if_else(value == correct_answer, correct_answer_wcheck, value))
+
+```
+
+### Bar Chart Plots
+Now that the data is cleaned, the data can be visualized. Below, the results for the question "How certain is it that the mean temperature at the left encircled area will reach a temperature above 25 °C?" are visualised in a stacked barchart.
+```{r barchart unc above}
+ggplot(unc_above_df, aes(fill = name, y = value)) + 
+  geom_bar(stat = "count") +
+  scale_fill_viridis_d() +
+  facet_wrap(~name) +
+  labs(
+    fill = "Map",
+    x = "Frequency",   
+    y = "Answer",   
+    title = "Certainty of Left Area Exceeding 25 °C")
+```
+
+As can be observed in the barchart, the answers were very spread out, indicating that users were not sure about this question. However, only a few people answered "I'm not sure", while in contrast, it was answered more than 30 times across all maps that it is not possible to derive the certainty of the temperature projection with the given map (the highest frequency came from map 3, with n = 13, and the lowest for map 2, with n = 3). The correct answer here was "somewhat certain", but only few people answered that, with the highest frequency for map 2 (n = 8). 
+
+Below, the answers for the question "Is it more likely that the temperature at the left encircled area or the right encircled area will be below 23 °C?" are visualized in a separate bar chart for each map. Each map is visualized separately, as this provided a more readable graph as most of the answers were centred on one value. 
+```{r barchart unc below}
+y_answer_labels <- c("Not sure",
+                     "Not derivable",
+                     "Equal chance <23 °C",
+                     "Left more likely <23 °C",
+                     "Right more likely <23 °C ✅ ")
+                     
+ggplot(unc_below_df, aes(fill = name, y = value)) + 
+  geom_bar(stat = "count") +
+  scale_fill_viridis_d() +
+  scale_y_discrete(labels = y_answer_labels) +
+  facet_wrap(~name) +
+  labs(
+    fill = "Map",
+    x = "Frequency",   
+    y = "Answer",   
+    title = "Certainty of Temperature Below 23 °C: Left vs. Right Area")
+
+```
+
+The answers to this question are clearly centered on the option that the right encircled area was more likely to reach a temperature below 23 °C than the right encircled area. This was also the correct answer. No real differences between the maps can be observed. 
 
