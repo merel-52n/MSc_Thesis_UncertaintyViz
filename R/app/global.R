@@ -83,4 +83,11 @@ leaflet() |>
   addPolygons(data = st_union(andalucia_states), fill = FALSE) |>
   addCircleMarkers(lng = locationA$lon, lat = locationA$lat, radius = 10, color = "black", fill = FALSE, fillOpacity = 1)
 
+# Get the min and max temperature values in location A
+sf_locationA <- st_as_sf(locationA, coords = c("lon", "lat"), crs = 4326)
+min_temp <- st_extract(min_temps_june["mean_temp_pred"], at = sf_locationA)
+max_temp <- st_extract(max_temps_june["mean_temp_pred"], at = sf_locationA)
 
+# Get deviation level and temperature in location A (map 2)
+temp <- st_extract(mean_temps_june["mean_temp_pred"], at = sf_locationA)
+deviation <- st_extract(mean_temps_june["mean_temp_difference"], at = sf_locationA)

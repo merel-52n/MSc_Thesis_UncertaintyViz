@@ -109,7 +109,7 @@ This section tries to analyse the results of the questions on uncertainty. To do
 col_name_unc_above <- colnames(df)[7]
 col_name_unc_below <- colnames(df)[8]
 unc_above_df <- df |> select(contains(col_name_unc_above))
-colnames(unc_above_df) <- c("Map1 ", "Map 2", "Map 3", "Map 4")
+colnames(unc_above_df) <- c("Map 1", "Map 2", "Map 3", "Map 4")
 unc_above_df <- pivot_longer(unc_above_df, cols = everything())
 unc_below_df <- df |> select(contains(col_name_unc_below))
 colnames(unc_below_df) <- c("Map 1", "Map 2", "Map 3", "Map 4")
@@ -143,12 +143,15 @@ unc_above_df <- unc_above_df |>
 ```
 
 ### Bar Chart Plots
-Now that the data is cleaned, the data can be visualized. Below, the results for the question "How certain is it that the mean temperature at the left encircled area will reach a temperature above 25 °C?" are visualised in a stacked barchart.
+Now that the data is cleaned, the data can be visualized. Below, the results for the question "How certain is it that the mean temperature at the left encircled area will reach a temperature above 25 °C?" are visualised in a faceted barchart.
 ```{r barchart unc above}
+custom_order2 <- rev(c("Somewhat certain ✅ ", "Very certain", "Neither uncertain nor certain", "Somewhat uncertain", "Very uncertain", "I’m not sure", "It’s not possible to derive that from this map"))
+
 ggplot(unc_above_df, aes(fill = name, y = value)) + 
   geom_bar(stat = "count") +
   scale_fill_viridis_d() +
   facet_wrap(~name) +
+  scale_y_discrete(limits = custom_order2) +
   labs(
     fill = "Map",
     x = "Frequency",   
@@ -180,4 +183,11 @@ ggplot(unc_below_df, aes(fill = name, y = value)) +
 ```
 
 The answers to this question are clearly centered on the option that the right encircled area was more likely to reach a temperature below 23 °C than the right encircled area. This was also the correct answer. No real differences between the maps can be observed. 
+
+## Possible map combinations and preferences
+Below, the answer for the question on preference of map combinations is displayed. The unique answers are displayed along with their frequency. 
+```{r map combos}
+table(df$Imagine.you.would.decide.which.uncertainty.maps.are.incorporated.into.a.climate.service.application..Is.there.any.combination.of.maps.1.4.that.you.would.find.helpful..If.so..please.tick.the.boxes.of.the.maps.that.you.would.think.would.be.helpful.together..)
+```
+
 
