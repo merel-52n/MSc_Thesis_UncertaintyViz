@@ -6,7 +6,7 @@ Please note that the app is dependent on the package Vizumap, which has to be in
 ```
 remotes::install_github(repo = "lydialucchesi/Vizumap", build_vignettes = TRUE, force = TRUE)
 ```
-This package in turn depends on two retired R packages, `rgeos` and `maptools`, which can be installed as follows:
+This package in turn depends on two retired R packages, `rgeos` and `maptools`, which can be installed from the CRAN archive as follows:
 ```
 devtools::install_github("https://github.com/cran/rgeos/tree/master")
 devtools::install_github("https://github.com/cran/maptools/tree/master")
