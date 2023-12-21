@@ -1,5 +1,5 @@
 # Set the path to the geopackage files
-setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/app")
+#setwd("/home/merel/Documents/I-CISK/MSc_Thesis_UncertaintyViz/R/app")
 path <- "./data"
 
 #### Load all GeoPackage files with meteorological data from meteo-RIA API from 2010 until 2022 ####
@@ -232,12 +232,12 @@ leaflet() |>
             labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))) |>
   addPolygons(data = andalucia, fill = FALSE, color = "red", weight = 2)
 
-#### Save relevant items as .RData file ####
-kriged_slices_list <- c()
-for (year in years) {
-  kriged_slices_list <- c(kriged_slices_list, (paste0("kriged_slices_", year)))
-}
-save(list = kriged_slices_list, file = "kriged_slices_data.RData", compress = FALSE)
-
-kriged_means <- c("mean_temps_june", "min_temps_june", "max_temps_june")
-save(list = kriged_means, file = "kriged_means.RData", compress = FALSE)
+#### Save relevant items as .RData file (for running faster) ####
+# kriged_slices_list <- c()
+# for (year in years) {
+#   kriged_slices_list <- c(kriged_slices_list, (paste0("kriged_slices_", year)))
+# }
+# save(list = kriged_slices_list, file = "kriged_slices_data.RData", compress = FALSE)
+# 
+# kriged_means <- c("mean_temps_june", "min_temps_june", "max_temps_june")
+# save(list = kriged_means, file = "kriged_means.RData", compress = FALSE)

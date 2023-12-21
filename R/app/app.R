@@ -1,6 +1,6 @@
 source("global.R", local = T)
-#source("kriging_slicewise.R", local = T)
-#source("pixmap.R", local = T)
+source("kriging_slicewise.R", local = T)
+source("pixmap.R", local = T)
 
 #### UI ####
 ui <- fluidPage(

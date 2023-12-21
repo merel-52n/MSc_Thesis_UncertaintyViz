@@ -15,16 +15,16 @@ library(leafsync)
 library(viridisLite)
 library(shiny)
 library(rsconnect)
-#library(rnaturalearth)
+library(rnaturalearth)
 require(rgeos)
 require(maptools)
 require(Vizumap)
 
-# Load kriging data
-load("./data/kriged_means.RData")
-load("./data/kriged_slices_data.RData")
-load("./data/unifPixMap.RData")
-load("./data/shapes.RData")
+# Load kriging data (for fast version -- use "deploy" GitHub branch for this)
+# load("./data/kriged_means.RData")
+# load("./data/kriged_slices_data.RData")
+# load("./data/unifPixMap.RData")
+# load("./data/shapes.RData")
 
 # Configurable variables
 years = 2010:2015
@@ -60,9 +60,9 @@ pal2_legend = colorNumeric(
 )
 
 # Download Spain regions and crop to Andalucia
-# spain_states <- ne_states(country = "Spain", returnclass = "sf")
-# andalucia_states <- spain_states[spain_states$region == "Andalucía", ] |> select(name)
-# andalucia <- st_union(andalucia_states)
+spain_states <- ne_states(country = "Spain", returnclass = "sf")
+andalucia_states <- spain_states[spain_states$region == "Andalucía", ] |> select(name)
+andalucia <- st_union(andalucia_states)
 #save(list = c("spain_states", "andalucia_states", "andalucia"), file = "shapes.RData", compress = FALSE)
 
 # Location A for in the Leaflet map as marker for reference
