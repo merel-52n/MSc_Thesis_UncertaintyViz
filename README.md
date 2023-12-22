@@ -2,7 +2,7 @@
 This repository contains the code for my MSc Thesis on visualizing uncertainty in climate variable forecasts. It contains the source code for the RShiny app that is available here: https://52north.shinyapps.io/UncertaintyViz/, as well as an .Rmd file that reproduces the survey analysis.
 
 # Running the RShiny app
-Please note that the app is dependent on the package Vizumap, which has to be installed from GitHib as follows:
+Please note that the app is dependent on the package Vizumap, which has to be installed from GitHub as follows:
 ```
 remotes::install_github(repo = "lydialucchesi/Vizumap", build_vignettes = TRUE, force = TRUE)
 ```
